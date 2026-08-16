@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Labeler</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <h1>Labeler</h1>
+    </div>
+    <div class="api-config">
+      <label for="apiBase">API base URL</label>
+      <input id="apiBase" type="text" placeholder="http://localhost:8000" />
+      <button id="saveApiBase" class="btn btn-ghost">Save</button>
+      <span id="apiStatus" class="status"></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="gallery-panel">
+      <form id="uploadForm" class="upload-form">
+        <label class="file-drop" for="fileInput">
+          <span id="fileDropText">Choose an image, or drop it here</span>
+        </label>
+        <input id="fileInput" type="file" accept="image/*" required hidden />
+        <button type="submit" class="btn btn-primary">Upload</button>
+      </form>
+      <div id="gallery" class="gallery"></div>
+    </section>
+
+    <section class="detail-panel">
+      <div id="emptyState" class="empty-state">
+        <span class="empty-icon">🖼️</span>
+        <p>Select an image to label it</p>
+      </div>
+      <div id="detail" class="hidden">
+        <div class="detail-image-wrap">
+          <img id="detailImage" alt="" />
+        </div>
+        <div class="detail-header">
+          <span id="detailName" class="detail-name"></span>
+          <button id="deleteImage" class="btn btn-danger-ghost">Delete</button>
+        </div>
+
+        <button id="extractLabel" class="btn btn-accent extract-btn">
+          <span class="extract-icon">✦</span>
+          <span id="extractLabelText">Extract label</span>
+        </button>
+
+        <form id="labelForm" class="label-form">
+          <input id="labelInput" type="text" placeholder="Add a label manually" required />
+          <button type="submit" class="btn btn-secondary">Add</button>
+        </form>
+        <ul id="labelList" class="label-list"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
