@@ -20,11 +20,11 @@ const extractBtnText = document.getElementById("extractLabelText");
 let selectedImageId = null;
 
 function getApiBase() {
-  return localStorage.getItem("labeler_api_base") || DEFAULT_API_BASE;
+  return localStorage.getItem("label_verifier_api_base") || DEFAULT_API_BASE;
 }
 
 function setApiBase(url) {
-  localStorage.setItem("labeler_api_base", url.replace(/\/$/, ""));
+  localStorage.setItem("label_verifier_api_base", url.replace(/\/$/, ""));
 }
 
 apiBaseInput.value = getApiBase();

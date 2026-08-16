@@ -2,7 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
-backend/labeler.db
+backend/label_verifier.db
 backend/storage/*
 !backend/storage/.gitkeep
 .DS_Store

@@ -1,6 +1,6 @@
-# Labeler
+# Label Verifier
 
-An image labeling tool: upload images, then extract a label automatically or add one manually.
+An AI-powered alcohol label verification app: upload a label image, then extract/verify its details automatically or add findings manually.
 
 Monorepo layout:
 
@@ -41,5 +41,5 @@ The backend finds the extraction service via the `EXTRACTION_SERVICE_URL` env va
 
 ## Deploying
 
-- **Frontend**: In the repo's Settings → Pages, set Source to `Deploy from a branch`, branch `main`, folder `/docs`. Live at `https://<your-username>.github.io/labeler/`.
+- **Frontend**: In the repo's Settings → Pages, set Source to `Deploy from a branch`, branch `main`, folder `/docs`. Live at `https://<your-username>.github.io/alcohol-label-verifier/`.
 - **Backend & extraction-service**: Deploy both somewhere reachable over HTTPS (Render, Railway, Fly.io, etc.), and set `EXTRACTION_SERVICE_URL` on the backend to the extraction service's deployed URL. Point the frontend's "API base URL" at the deployed backend.

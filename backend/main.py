@@ -19,7 +19,7 @@ STORAGE_DIR.mkdir(exist_ok=True)
 
 EXTRACTION_SERVICE_URL = os.environ.get("EXTRACTION_SERVICE_URL", "http://localhost:9000")
 
-app = FastAPI(title="Labeler API")
+app = FastAPI(title="Label Verifier API")
 
 app.add_middleware(
     CORSMiddleware,
