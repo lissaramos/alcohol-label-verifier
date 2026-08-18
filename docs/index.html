@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Label Verifier</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
   <header>
@@ -21,45 +21,58 @@
   </header>
 
   <main>
-    <section class="gallery-panel">
-      <form id="uploadForm" class="upload-form">
+    <section class="panel">
+      <h2>1. Add a label to verify</h2>
+      <p class="hint">Enter what was submitted on the application, and upload a photo of the label. The government warning is checked automatically — no need to enter it.</p>
+
+      <form id="addForm" class="add-form">
         <label class="file-drop" for="fileInput">
-          <span id="fileDropText">Choose an image, or drop it here</span>
+          <span id="fileDropText">Choose a label photo, or drop it here</span>
         </label>
         <input id="fileInput" type="file" accept="image/*" required hidden />
-        <button type="submit" class="btn btn-primary">Upload</button>
+
+        <div class="field-grid">
+          <label>Brand name
+            <input id="brandName" type="text" required placeholder="e.g. Old Tom Distillery" />
+          </label>
+          <label>Class / type
+            <input id="classType" type="text" required placeholder="e.g. Kentucky Straight Bourbon Whiskey" />
+          </label>
+          <label>Alcohol content
+            <input id="alcoholContent" type="text" required placeholder="e.g. 45% Alc./Vol. (90 Proof)" />
+          </label>
+          <label>Net contents
+            <input id="netContents" type="text" required placeholder="e.g. 750 mL" />
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-secondary">Add to queue</button>
       </form>
-      <div id="gallery" class="gallery"></div>
+
+      <div id="queueWrap" class="hidden">
+        <h3>Queue (<span id="queueCount">0</span>)</h3>
+        <ul id="queueList" class="queue-list"></ul>
+        <button id="verifyAllBtn" class="btn btn-primary verify-all-btn">Verify all</button>
+      </div>
     </section>
 
-    <section class="detail-panel">
-      <div id="emptyState" class="empty-state">
-        <span class="empty-icon">🖼️</span>
-        <p>Select an image to label it</p>
+    <section class="panel">
+      <h2>2. Results</h2>
+      <div id="resultsEmpty" class="empty-state">
+        <span class="empty-icon">✅</span>
+        <p>Verified applications will show up here</p>
       </div>
-      <div id="detail" class="hidden">
-        <div class="detail-image-wrap">
-          <img id="detailImage" alt="" />
-        </div>
-        <div class="detail-header">
-          <span id="detailName" class="detail-name"></span>
-          <button id="deleteImage" class="btn btn-danger-ghost">Delete</button>
-        </div>
-
-        <button id="extractLabel" class="btn btn-accent extract-btn">
-          <span class="extract-icon">✦</span>
-          <span id="extractLabelText">Extract label</span>
-        </button>
-
-        <form id="labelForm" class="label-form">
-          <input id="labelInput" type="text" placeholder="Add a label manually" required />
-          <button type="submit" class="btn btn-secondary">Add</button>
-        </form>
-        <ul id="labelList" class="label-list"></ul>
-      </div>
+      <ul id="resultsList" class="results-list hidden"></ul>
     </section>
   </main>
 
-  <script src="app.js"></script>
+  <div id="detailOverlay" class="overlay hidden">
+    <div class="detail-modal">
+      <button id="closeDetail" class="btn btn-ghost close-btn">Close</button>
+      <div id="detailContent"></div>
+    </div>
+  </div>
+
+  <script src="app.js?v=2"></script>
 </body>
 </html>
