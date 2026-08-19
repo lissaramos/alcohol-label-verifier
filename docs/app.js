@@ -265,6 +265,10 @@ function renderDetail(app) {
       </thead>
       <tbody>${rows}</tbody>
     </table>
+    <details class="debug-console">
+      <summary>Debug: raw OCR text</summary>
+      <pre>${app.ocr_text ? escapeHtml(app.ocr_text) : "<em>(no text extracted)</em>"}</pre>
+    </details>
   `;
 
   detailContent.querySelectorAll(".override-btn").forEach((btn) => {
