@@ -45,13 +45,20 @@ app.add_middleware(
 # Never surfaced in earlier local testing because oneDNN only activates on
 # Intel/AMD CPUs, not Apple Silicon.
 #
-# cpu_threads=2: even with onnxruntime, a real request on Render's 1-CPU
-# instance still took ~7s (vs ~0.2-0.3s locally). The default is 10 threads
-# — reasonable on a 16-core dev machine, but likely counterproductive on a
-# single (v)CPU, where the OS is context-switching between far more threads
-# than it has cores to run them on rather than doing useful work. Not
-# confirmed locally (nothing to contend with on 16 cores either way), but
-# low-risk and worth testing directly on the actual deployment target.
+# engine_config={"intra_op_num_threads": ...}: even with onnxruntime, a real
+# request on Render's 1-CPU instance still took ~7s (vs ~0.2-0.3s locally).
+# First attempt was `cpu_threads=2` — turned out to be a no-op for this
+# engine: that setting only feeds Paddle's native "paddle_static" engine
+# config builder (see paddleocr/_common_args.py, prepare_common_init_args),
+# which is skipped entirely for engine="onnxruntime" unless engine_config is
+# passed explicitly. ONNX Runtime's own thread settings are
+# intra_op_num_threads/inter_op_num_threads via engine_config — confirmed
+# locally that this one is actually applied (measurably changed local timing
+# from ~0.2s to ~0.43s when constrained to 2 threads, unlike cpu_threads
+# which changed nothing), so more likely to have a real effect in
+# production. Still not certain it fully explains the ~7s gap — could also
+# be a genuinely weak/throttled vCPU — so re-check timing after this change
+# rather than assuming it's solved.
 _ocr = PaddleOCR(
     text_detection_model_name="PP-OCRv5_mobile_det",
     text_recognition_model_name="en_PP-OCRv5_mobile_rec",
@@ -59,7 +66,7 @@ _ocr = PaddleOCR(
     use_doc_unwarping=False,
     use_textline_orientation=True,
     engine="onnxruntime",
-    cpu_threads=2,
+    engine_config={"intra_op_num_threads": 2, "inter_op_num_threads": 1},
 )
 
 
