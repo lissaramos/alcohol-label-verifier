@@ -1,5 +1,10 @@
 const DEFAULT_API_BASE = "http://localhost:8000";
-const MAX_CONCURRENT_VERIFICATIONS = 4;
+// PP-OCRv5 is CPU-bound and doesn't parallelize well: benchmarking showed 2
+// concurrent extractions already pushing per-request latency to ~5s (the
+// hard budget from the interviews), and 4 concurrent pushing it to ~10s.
+// Keeping this at 1 trades slower batch throughput for a guarantee that a
+// single agent's wait time stays close to the ~2.5s single-request latency.
+const MAX_CONCURRENT_VERIFICATIONS = 1;
 
 const FIELD_LABELS = {
   brand_name: "Brand name",
