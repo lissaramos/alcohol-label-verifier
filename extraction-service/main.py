@@ -30,20 +30,27 @@ app.add_middleware(
 # product labels, so they're left off to avoid the extra latency and model
 # downloads.
 #
-# enable_mkldnn=False: Paddle's oneDNN (Intel CPU) backend defaults to on and
-# crashed in production with `NotImplementedError:
-# ConvertPirAttribute2RuntimeAttribute not support [...DoubleAttribute]` on
-# the very first real request — a bug in this Paddle version's oneDNN path,
-# not something we can work around other than avoiding it. Never surfaced in
-# local testing because that's on Apple Silicon, where oneDNN doesn't apply.
-# Falls back to Paddle's standard (non-oneDNN) CPU kernels instead.
+# engine="onnxruntime": Paddle's own inference engine hit a real bug in its
+# oneDNN (Intel CPU) backend in production — NotImplementedError:
+# ConvertPirAttribute2RuntimeAttribute not support [...DoubleAttribute] — on
+# the very first real request. Disabling oneDNN (enable_mkldnn=False) fixed
+# the crash but made inference ~10x slower in production (~23s vs a ~2s
+# local benchmark), blowing well past the 5-second budget: turns out Paddle's
+# un-optimized CPU kernels are genuinely that much slower without it, and a
+# 1-CPU cloud instance has none of the 16 cores this was first benchmarked
+# on to compensate. Routing inference through ONNX Runtime instead
+# sidesteps Paddle's native engine (and its buggy oneDNN integration)
+# entirely, while still getting proper CPU-optimized performance — measured
+# faster AND lower-memory than either Paddle configuration in local testing.
+# Never surfaced in earlier local testing because oneDNN only activates on
+# Intel/AMD CPUs, not Apple Silicon.
 _ocr = PaddleOCR(
     text_detection_model_name="PP-OCRv5_mobile_det",
     text_recognition_model_name="en_PP-OCRv5_mobile_rec",
     use_doc_orientation_classify=False,
     use_doc_unwarping=False,
     use_textline_orientation=True,
-    enable_mkldnn=False,
+    engine="onnxruntime",
 )
 
 
