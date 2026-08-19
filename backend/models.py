@@ -11,6 +11,7 @@ class Application(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
+    beverage_type: Mapped[str] = mapped_column(String, default="distilled_spirits")
     brand_name: Mapped[str] = mapped_column(String)
     class_type: Mapped[str] = mapped_column(String)
     alcohol_content: Mapped[str] = mapped_column(String)

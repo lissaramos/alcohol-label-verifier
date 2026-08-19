@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Label Verifier</title>
-  <link rel="stylesheet" href="style.css?v=3" />
+  <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
   <header>
@@ -31,6 +31,14 @@
         </label>
         <input id="fileInput" type="file" accept="image/*" required hidden />
 
+        <label class="beverage-type-label">Beverage type
+          <select id="beverageType" class="beverage-type-select">
+            <option value="distilled_spirits">Distilled spirits</option>
+            <option value="wine">Wine</option>
+            <option value="beer">Beer / malt beverage</option>
+          </select>
+        </label>
+
         <div class="field-grid">
           <label>Brand name
             <input id="brandName" type="text" required placeholder="e.g. Old Tom Distillery" />
@@ -38,7 +46,8 @@
           <label>Class / type
             <input id="classType" type="text" required placeholder="e.g. Kentucky Straight Bourbon Whiskey" />
           </label>
-          <label>Alcohol content
+          <label>
+            <span id="alcoholContentLabel">Alcohol content</span>
             <input id="alcoholContent" type="text" required placeholder="e.g. 45% Alc./Vol. (90 Proof)" />
           </label>
           <label>Net contents
@@ -73,6 +82,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

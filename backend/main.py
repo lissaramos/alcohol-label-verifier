@@ -44,7 +44,7 @@ def _apply_results(db: Session, application: models.Application, ocr_text: str) 
         verification.FIELD_ALCOHOL_CONTENT: application.alcohol_content,
         verification.FIELD_NET_CONTENTS: application.net_contents,
     }
-    field_results = verification.run_verification(fields, ocr_text)
+    field_results = verification.run_verification(fields, ocr_text, application.beverage_type)
     application.overall_status = verification.compute_overall_status(field_results)
 
     for field_result in field_results:
@@ -63,12 +63,19 @@ def _apply_results(db: Session, application: models.Application, ocr_text: str) 
 @app.post("/applications", response_model=schemas.ApplicationDetailOut)
 async def create_application(
     file: UploadFile,
+    beverage_type: str = Form(...),
     brand_name: str = Form(...),
     class_type: str = Form(...),
-    alcohol_content: str = Form(...),
+    alcohol_content: str = Form(""),
     net_contents: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    if beverage_type not in verification.BEVERAGE_TYPES:
+        raise HTTPException(400, f"beverage_type must be one of {verification.BEVERAGE_TYPES}")
+
+    if not alcohol_content.strip() and beverage_type != verification.BEVERAGE_BEER:
+        raise HTTPException(400, "alcohol_content is required for this beverage type")
+
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(400, "File must be an image")
 
@@ -94,6 +101,7 @@ async def create_application(
     ocr_text = response.json()["text"]
 
     application = models.Application(
+        beverage_type=beverage_type,
         brand_name=brand_name,
         class_type=class_type,
         alcohol_content=alcohol_content,

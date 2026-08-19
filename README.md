@@ -1,6 +1,6 @@
 # Label Verifier
 
-An AI-powered prototype for verifying alcohol label artwork against the values submitted on a TTB label application — brand name, class/type, alcohol content, net contents, and the mandatory government warning statement.
+An AI-powered prototype for verifying alcohol label artwork against the values submitted on a TTB label application — brand name, class/type, alcohol content, net contents, and the mandatory government warning statement. Verification rules adapt to the beverage category (distilled spirits, wine, or beer/malt beverage), since TTB's requirements genuinely differ between them.
 
 Built as a standalone proof-of-concept, not integrated with COLA. Monorepo layout:
 
@@ -16,14 +16,18 @@ frontend (docs)  --->  backend (:8000)  --->  extraction-service (:9000)
 
 ## Approach
 
-An agent enters what was submitted on the application (brand name, class/type, alcohol content, net contents) and uploads a photo of the label. The backend OCRs the label, then checks each field:
+An agent selects a beverage type, enters what was submitted on the application (brand name, class/type, alcohol content, net contents), and uploads a photo of the label. The backend OCRs the label, then checks each field:
 
-- **Brand name / class-type**: normalized (lowercased, punctuation stripped) and fuzzy-matched against the label text. An exact match after normalization → `match`. A close-but-imperfect match → `needs review`, surfaced to the agent rather than silently passed or failed — this is what makes "Stone's Throw" vs "STONE'S THROW" pass automatically while still flagging genuinely uncertain cases for a human.
-- **Alcohol content**: the percentage is parsed out of both the submission and the OCR text and compared numerically, with a small tolerance band before something is flagged as a hard mismatch vs. a review.
-- **Net contents**: volume + unit parsed and compared.
-- **Government warning**: checked with an exact, case-sensitive substring match against the legally required text (27 CFR 16.21). Because OCR preserves case as printed, this alone catches "Government Warning" in title case or reworded text — no font-weight/bold detection needed. Per TTB requirements, this field has no tolerance: if it doesn't match exactly, the application fails, regardless of how well everything else matches.
+- **Brand name / class-type**: normalized (lowercased, punctuation stripped) and fuzzy-matched against the label text. An exact match after normalization → `match`. A close-but-imperfect match → `needs review`, surfaced to the agent rather than silently passed or failed — this is what makes "Stone's Throw" vs "STONE'S THROW" pass automatically while still flagging genuinely uncertain cases for a human. Because this searches for the expected value *anywhere* in the OCR text rather than assuming a fixed layout, it's naturally tolerant of **personalized labels** — extra custom text (a gift message, an event name) on the label doesn't interfere with matching the mandatory fields, since nothing requires the label to contain *only* those fields. Verified directly with a synthetic personalized label during development.
+- **Alcohol content**: category-dependent, since this is where TTB's rules diverge most:
+  - *Distilled spirits*: always mandatory, matched against the OCR'd percentage with a tight tolerance.
+  - *Wine*: mandatory, but 27 CFR 4.36 grants a wider legal tolerance (±1.5 points under 14% ABV, ±1.0 at/above it — fortified wines). Wines in the 7–14% band may also state "Table Wine" or "Light Wine" instead of a percentage; the check accepts either.
+  - *Beer*: TTB does **not** federally require an ABV statement on malt beverage labels. If the agent leaves the field blank, it's marked `not applicable` rather than flagged as missing. If a value is provided (common practice, sometimes state-mandated), it's still verified.
+- **Net contents**: volume + unit parsed and compared, unit-normalized so "12 FL OZ", "fl. oz.", and "floz" all match — the standard beer unit, which differs from the mL/L convention on wine and spirits.
+- **Government warning**: checked with an exact, case-sensitive substring match against the legally required text (27 CFR 16.21). Because OCR preserves case as printed, this alone catches "Government Warning" in title case or reworded text — no font-weight/bold detection needed. This applies identically to all three categories and has no tolerance: if it doesn't match exactly, the application fails regardless of how well everything else matches.
+- **Sulfite declaration** (wine only): wine with ≥10ppm sulfur dioxide must carry a "Contains Sulfites" statement (27 CFR 4.32(e)). Since the label alone can't confirm whether the product actually contains that much, a missing statement is surfaced for agent review rather than an automatic fail.
 
-An agent can override any non-matching field with a one-click "Mark match" / "Mark mismatch" — encoding the judgment call that fuzzy matching alone can't make, while leaving the government warning's exact-match requirement absolute (an override on it still recomputes correctly, but its own status still governs whether the application can ever show as fully verified without agent action).
+An agent can override any non-matching field with a one-click "Mark match" / "Mark mismatch" — encoding the judgment call that fuzzy matching alone can't make, while leaving the government warning's exact-match requirement absolute (an override on it still recomputes correctly, but its own status still governs whether the application can ever show as fully verified without agent action). Fields marked `not applicable` (e.g. blank beer ABV) aren't override candidates — there's nothing to judge.
 
 Batch upload is a client-side queue: an agent adds several label+field entries before running verification, which then fires with a small concurrency cap (4 at a time) against the same single-item endpoint. This was a deliberate simplification over a server-side job queue — see Trade-offs below.
 
@@ -39,7 +43,8 @@ Batch upload is a client-side queue: an agent adds several label+field entries b
 - **Scope**: verification covers the five fields called out in the prompt's sample label (brand name, class/type, alcohol content, net contents, government warning). Bottler name/address and country of origin are out of scope for this prototype.
 - **Application data entry**: since the interviews explicitly said this prototype isn't integrating with COLA and didn't specify an intake format, applications are entered through a simple form (one per label) rather than assuming a particular upstream system.
 - **Batch processing is client-orchestrated**, not a true async job queue. It comfortably handles tens of items with live per-row status; at the interview's cited scale (200-300 at once) a production version would want a server-side queue (e.g. Celery/RQ) so a dropped connection doesn't lose in-flight work. Documented here as the natural next step rather than built, given the prototype's time box.
-- **ABV tolerance** is a simplification (a small fixed numeric band) rather than TTB's actual class-dependent legal tolerances — flagged as a known gap, not implemented.
+- **Category-specific rules** cover the differences most relevant to verification — ABV requirements/tolerances and the wine sulfite declaration. Other category-specific label elements TTB requires (e.g. appellation of origin on wine, specific class/type subcategories for spirits) are out of scope for this prototype, same as bottler address/country of origin above.
+- **Wine ABV tolerance** uses a simplified two-band model (±1.5 under 14%, ±1.0 at/above) approximating 27 CFR 4.36 rather than every class-specific exception in the full regulation.
 - **Image quality**: basic preprocessing (grayscale, upscaling, contrast) helps Tesseract handle imperfect photos, but there's no deskew/perspective correction. Badly angled or heavily glared photos will still under-perform — exactly the case Jenny raised, and exactly where a cloud vision model would do better at the cost of the speed/network trade-off described above. A natural extension is a hybrid mode: local OCR first, with an optional (agent-triggered) cloud-assisted retry for label photos that fail extraction.
 - **Security**: per the interview notes, no hardening was done beyond what's reasonable for a local prototype (no auth, no encryption at rest) — flagged explicitly since a production deployment would need it.
 

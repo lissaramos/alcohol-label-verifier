@@ -177,6 +177,26 @@ main {
   background: var(--accent-soft);
 }
 
+.beverage-type-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+}
+
+.beverage-type-select {
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -362,11 +382,24 @@ main {
 .status-pill.status-mismatch { background: var(--danger-soft); color: var(--danger); }
 .status-pill.status-review,
 .status-pill.status-not_found { background: var(--warning-soft); color: var(--warning); }
+.status-pill.status-not_applicable { background: var(--surface-subtle); color: var(--text-muted); }
 
 .override-tag {
   font-size: 0.68rem;
   color: var(--text-muted);
   font-style: italic;
+}
+
+.beverage-tag {
+  display: inline-flex;
+  margin-left: 0.4rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 /* --- Detail overlay --- */
@@ -438,6 +471,10 @@ main {
 
 .field-table tr:last-child td {
   border-bottom: none;
+}
+
+.field-row.status-not_applicable {
+  opacity: 0.6;
 }
 
 .override-btn {

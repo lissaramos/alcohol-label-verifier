@@ -7,6 +7,7 @@ const FIELD_LABELS = {
   alcohol_content: "Alcohol content",
   net_contents: "Net contents",
   government_warning: "Government warning",
+  sulfite_declaration: "Sulfite declaration",
 };
 
 const STATUS_LABELS = {
@@ -17,6 +18,13 @@ const STATUS_LABELS = {
   mismatch: "Mismatch",
   review: "Review",
   not_found: "Not found on label",
+  not_applicable: "N/A",
+};
+
+const BEVERAGE_LABELS = {
+  distilled_spirits: "Distilled spirits",
+  wine: "Wine",
+  beer: "Beer / malt beverage",
 };
 
 const apiBaseInput = document.getElementById("apiBase");
@@ -25,9 +33,11 @@ const apiStatus = document.getElementById("apiStatus");
 const fileInput = document.getElementById("fileInput");
 const fileDropText = document.getElementById("fileDropText");
 const addForm = document.getElementById("addForm");
+const beverageTypeInput = document.getElementById("beverageType");
 const brandNameInput = document.getElementById("brandName");
 const classTypeInput = document.getElementById("classType");
 const alcoholContentInput = document.getElementById("alcoholContent");
+const alcoholContentLabel = document.getElementById("alcoholContentLabel");
 const netContentsInput = document.getElementById("netContents");
 
 const queueWrap = document.getElementById("queueWrap");
@@ -66,6 +76,17 @@ fileInput.addEventListener("change", () => {
   fileDropText.textContent = fileInput.files[0]?.name || "Choose a label photo, or drop it here";
 });
 
+function updateAlcoholContentField() {
+  // TTB does not federally require an ABV statement on beer/malt beverage
+  // labels, so make the field optional when that's selected.
+  const isBeer = beverageTypeInput.value === "beer";
+  alcoholContentInput.required = !isBeer;
+  alcoholContentLabel.textContent = isBeer ? "Alcohol content (optional for beer)" : "Alcohol content";
+}
+
+beverageTypeInput.addEventListener("change", updateAlcoholContentField);
+updateAlcoholContentField();
+
 async function checkHealth() {
   try {
     const res = await fetch(`${getApiBase()}/health`);
@@ -88,6 +109,7 @@ addForm.addEventListener("submit", (e) => {
   queue.push({
     id: ++queueIdCounter,
     file,
+    beverage_type: beverageTypeInput.value,
     brand_name: brandNameInput.value.trim(),
     class_type: classTypeInput.value.trim(),
     alcohol_content: alcoholContentInput.value.trim(),
@@ -97,6 +119,7 @@ addForm.addEventListener("submit", (e) => {
 
   addForm.reset();
   fileDropText.textContent = "Choose a label photo, or drop it here";
+  updateAlcoholContentField();
   renderQueue();
 });
 
@@ -177,6 +200,7 @@ verifyAllBtn.addEventListener("click", async () => {
 async function submitApplication(item) {
   const formData = new FormData();
   formData.append("file", item.file);
+  formData.append("beverage_type", item.beverage_type);
   formData.append("brand_name", item.brand_name);
   formData.append("class_type", item.class_type);
   formData.append("alcohol_content", item.alcohol_content);
@@ -214,7 +238,7 @@ function renderResults(applications) {
     li.innerHTML = `
       <span class="status-badge status-${app.overall_status}">${STATUS_LABELS[app.overall_status]}</span>
       <span class="result-name">${escapeHtml(app.brand_name)}</span>
-      <span class="result-subtitle">${escapeHtml(app.class_type)}</span>
+      <span class="result-subtitle">${escapeHtml(app.class_type)} · ${BEVERAGE_LABELS[app.beverage_type] || app.beverage_type}</span>
     `;
     li.addEventListener("click", () => openDetail(app.id));
     resultsList.appendChild(li);
@@ -231,12 +255,18 @@ async function openDetail(id) {
 function renderDetail(app) {
   const rows = app.results
     .map((r) => {
-      const canOverride = r.status !== "match";
+      const canOverride = r.status !== "match" && r.status !== "not_applicable";
+      const notApplicable = r.status === "not_applicable";
+      const foundCell = notApplicable
+        ? "<em>not required for this beverage type</em>"
+        : r.extracted_value
+        ? escapeHtml(r.extracted_value)
+        : "<em>none found</em>";
       return `
         <tr class="field-row status-${r.status}">
           <td>${FIELD_LABELS[r.field_name] || r.field_name}</td>
-          <td>${escapeHtml(r.submitted_value)}</td>
-          <td>${r.extracted_value ? escapeHtml(r.extracted_value) : "<em>none found</em>"}</td>
+          <td>${notApplicable ? "<em>—</em>" : escapeHtml(r.submitted_value)}</td>
+          <td>${foundCell}</td>
           <td><span class="status-pill status-${r.status}">${STATUS_LABELS[r.status]}</span>${r.agent_override ? ' <span class="override-tag">agent reviewed</span>' : ""}</td>
           <td>
             ${canOverride ? `
@@ -253,6 +283,7 @@ function renderDetail(app) {
     <div class="detail-header">
       <div>
         <span class="status-badge status-${app.overall_status}">${STATUS_LABELS[app.overall_status]}</span>
+        <span class="beverage-tag">${BEVERAGE_LABELS[app.beverage_type] || app.beverage_type}</span>
         <h3>${escapeHtml(app.brand_name)}</h3>
         <p class="hint">${escapeHtml(app.class_type)}</p>
       </div>

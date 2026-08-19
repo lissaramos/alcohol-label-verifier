@@ -19,6 +19,7 @@ class ApplicationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    beverage_type: str
     brand_name: str
     class_type: str
     alcohol_content: str
