@@ -29,12 +29,21 @@ app.add_middleware(
 # Doc orientation/unwarping are for scanned-document photos, not relevant to
 # product labels, so they're left off to avoid the extra latency and model
 # downloads.
+#
+# enable_mkldnn=False: Paddle's oneDNN (Intel CPU) backend defaults to on and
+# crashed in production with `NotImplementedError:
+# ConvertPirAttribute2RuntimeAttribute not support [...DoubleAttribute]` on
+# the very first real request — a bug in this Paddle version's oneDNN path,
+# not something we can work around other than avoiding it. Never surfaced in
+# local testing because that's on Apple Silicon, where oneDNN doesn't apply.
+# Falls back to Paddle's standard (non-oneDNN) CPU kernels instead.
 _ocr = PaddleOCR(
     text_detection_model_name="PP-OCRv5_mobile_det",
     text_recognition_model_name="en_PP-OCRv5_mobile_rec",
     use_doc_orientation_classify=False,
     use_doc_unwarping=False,
     use_textline_orientation=True,
+    enable_mkldnn=False,
 )
 
 
