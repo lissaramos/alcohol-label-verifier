@@ -44,6 +44,14 @@ app.add_middleware(
 # faster AND lower-memory than either Paddle configuration in local testing.
 # Never surfaced in earlier local testing because oneDNN only activates on
 # Intel/AMD CPUs, not Apple Silicon.
+#
+# cpu_threads=2: even with onnxruntime, a real request on Render's 1-CPU
+# instance still took ~7s (vs ~0.2-0.3s locally). The default is 10 threads
+# — reasonable on a 16-core dev machine, but likely counterproductive on a
+# single (v)CPU, where the OS is context-switching between far more threads
+# than it has cores to run them on rather than doing useful work. Not
+# confirmed locally (nothing to contend with on 16 cores either way), but
+# low-risk and worth testing directly on the actual deployment target.
 _ocr = PaddleOCR(
     text_detection_model_name="PP-OCRv5_mobile_det",
     text_recognition_model_name="en_PP-OCRv5_mobile_rec",
@@ -51,6 +59,7 @@ _ocr = PaddleOCR(
     use_doc_unwarping=False,
     use_textline_orientation=True,
     engine="onnxruntime",
+    cpu_threads=2,
 )
 
 
