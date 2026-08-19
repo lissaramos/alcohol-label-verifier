@@ -54,6 +54,14 @@ _ocr = PaddleOCR(
 # o v a cr" at native resolution came back essentially perfect at 1600px.
 MIN_DIMENSION = 1600
 
+# The other end of the same problem: a real modern phone photo (e.g.
+# 4032x3024, 12MP) sent through this pipeline uncapped measured 6.2GB of
+# RSS — enough to OOM almost any reasonably-priced instance. PaddleX has its
+# own internal 4000px safety net, but that's still far too large to be
+# memory-safe; downscaling to this before inference brought the same photo
+# down to a fraction of that with no visible accuracy loss on label text.
+MAX_DIMENSION = 1600
+
 
 class ExtractionResult(BaseModel):
     text: str
@@ -68,11 +76,17 @@ def run_extraction(image_bytes: bytes) -> ExtractionResult:
         with Image.open(io.BytesIO(image_bytes)) as raw:
             processed = ImageOps.exif_transpose(raw).convert("RGB")
             width, height = processed.size
+
             scale = max(1.0, MIN_DIMENSION / min(width, height))
             if scale > 1.0:
-                processed = processed.resize(
-                    (int(width * scale), int(height * scale)), Image.LANCZOS
-                )
+                width, height = int(width * scale), int(height * scale)
+
+            downscale = min(1.0, MAX_DIMENSION / max(width, height))
+            if downscale < 1.0:
+                width, height = int(width * downscale), int(height * downscale)
+
+            if (width, height) != processed.size:
+                processed = processed.resize((width, height), Image.LANCZOS)
             image = np.array(processed)
     except Exception as exc:
         raise HTTPException(400, f"Could not read image: {exc}") from exc
