@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Label Verifier</title>
-  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
   <header>
@@ -23,13 +23,14 @@
   <main>
     <section class="panel">
       <h2>1. Add a label to verify</h2>
-      <p class="hint">Enter what was submitted on the application, and upload a photo of the label. The government warning is checked automatically — no need to enter it.</p>
+      <p class="hint">Enter what was submitted on the application, and upload a photo for each label surface (front, back, neck, strip) — one per photo, not combined into one image. The government warning is checked automatically — no need to enter it.</p>
 
       <form id="addForm" class="add-form">
         <label class="file-drop" for="fileInput">
-          <span id="fileDropText">Choose a label photo, or drop it here</span>
+          <span id="fileDropText">Choose one or more label photos (JPEG or PNG)</span>
         </label>
-        <input id="fileInput" type="file" accept="image/*" required hidden />
+        <input id="fileInput" type="file" accept="image/jpeg,image/png" multiple required hidden />
+        <ul id="fileList" class="file-list"></ul>
 
         <label class="beverage-type-label">Beverage type
           <select id="beverageType" class="beverage-type-select">
@@ -82,6 +83,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

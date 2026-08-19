@@ -60,9 +60,17 @@ def _apply_results(db: Session, application: models.Application, ocr_text: str) 
         )
 
 
+# TTB's own COLA guidance: upload each distinct label surface (front, back,
+# neck, strip) as a separate JPEG/PNG file rather than combining them into
+# one image — matches what testing found too (a combined front+back photo
+# jumbled OCR line order badly enough to break the government warning
+# match).
+ACCEPTED_IMAGE_TYPES = {"image/jpeg", "image/png"}
+
+
 @app.post("/applications", response_model=schemas.ApplicationDetailOut)
 async def create_application(
-    file: UploadFile,
+    files: list[UploadFile],
     beverage_type: str = Form(...),
     brand_name: str = Form(...),
     class_type: str = Form(...),
@@ -76,29 +84,48 @@ async def create_application(
     if not alcohol_content.strip() and beverage_type != verification.BEVERAGE_BEER:
         raise HTTPException(400, "alcohol_content is required for this beverage type")
 
-    if not file.content_type or not file.content_type.startswith("image/"):
-        raise HTTPException(400, "File must be an image")
+    if not files:
+        raise HTTPException(400, "At least one label image is required")
 
-    ext = Path(file.filename or "").suffix
-    stored_name = f"{uuid.uuid4().hex}{ext}"
-    dest = STORAGE_DIR / stored_name
+    for f in files:
+        if f.content_type not in ACCEPTED_IMAGE_TYPES:
+            raise HTTPException(400, f"{f.filename}: only JPEG or PNG images are accepted")
 
-    contents = await file.read()
-    dest.write_bytes(contents)
+    saved_images: list[models.LabelImage] = []
+    ocr_sections: list[str] = []
 
     async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(
-                f"{EXTRACTION_SERVICE_URL}/extract",
-                files={"file": (file.filename or stored_name, contents, file.content_type)},
-                timeout=30,
-            )
-            response.raise_for_status()
-        except httpx.HTTPError as exc:
-            dest.unlink(missing_ok=True)
-            raise HTTPException(502, f"Extraction service unavailable: {exc}") from exc
+        for index, f in enumerate(files, start=1):
+            ext = Path(f.filename or "").suffix
+            stored_name = f"{uuid.uuid4().hex}{ext}"
+            dest = STORAGE_DIR / stored_name
+            contents = await f.read()
+            dest.write_bytes(contents)
 
-    ocr_text = response.json()["text"]
+            try:
+                response = await client.post(
+                    f"{EXTRACTION_SERVICE_URL}/extract",
+                    files={"file": (f.filename or stored_name, contents, f.content_type)},
+                    timeout=30,
+                )
+                response.raise_for_status()
+            except httpx.HTTPError as exc:
+                for saved in saved_images:
+                    (STORAGE_DIR / saved.filename).unlink(missing_ok=True)
+                dest.unlink(missing_ok=True)
+                raise HTTPException(502, f"Extraction service unavailable: {exc}") from exc
+
+            label = f.filename or f"Photo {index}"
+            ocr_sections.append(f"=== {label} ===\n{response.json()['text']}")
+            saved_images.append(
+                models.LabelImage(
+                    filename=stored_name,
+                    original_name=f.filename or stored_name,
+                    content_type=f.content_type,
+                )
+            )
+
+    ocr_text = "\n\n".join(ocr_sections)
 
     application = models.Application(
         beverage_type=beverage_type,
@@ -106,10 +133,8 @@ async def create_application(
         class_type=class_type,
         alcohol_content=alcohol_content,
         net_contents=net_contents,
-        image_filename=stored_name,
-        image_original_name=file.filename or stored_name,
-        image_content_type=file.content_type,
     )
+    application.images = saved_images
     db.add(application)
     db.flush()
 
@@ -137,15 +162,15 @@ def get_application(application_id: int, db: Session = Depends(get_db)):
     return application
 
 
-@app.get("/applications/{application_id}/image")
-def get_application_image(application_id: int, db: Session = Depends(get_db)):
-    application = db.get(models.Application, application_id)
-    if not application:
-        raise HTTPException(404, "Application not found")
-    path = STORAGE_DIR / application.image_filename
+@app.get("/applications/{application_id}/images/{image_id}/file")
+def get_label_image_file(application_id: int, image_id: int, db: Session = Depends(get_db)):
+    image = db.get(models.LabelImage, image_id)
+    if not image or image.application_id != application_id:
+        raise HTTPException(404, "Image not found")
+    path = STORAGE_DIR / image.filename
     if not path.exists():
         raise HTTPException(404, "Image file missing")
-    return FileResponse(path, media_type=application.image_content_type)
+    return FileResponse(path, media_type=image.content_type)
 
 
 @app.delete("/applications/{application_id}", status_code=204)
@@ -153,9 +178,10 @@ def delete_application(application_id: int, db: Session = Depends(get_db)):
     application = db.get(models.Application, application_id)
     if not application:
         raise HTTPException(404, "Application not found")
-    path = STORAGE_DIR / application.image_filename
-    if path.exists():
-        path.unlink()
+    for image in application.images:
+        path = STORAGE_DIR / image.filename
+        if path.exists():
+            path.unlink()
     db.delete(application)
     db.commit()
 

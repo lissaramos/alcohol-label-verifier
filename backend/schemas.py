@@ -15,6 +15,13 @@ class VerificationResultOut(BaseModel):
     agent_override: bool
 
 
+class LabelImageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    original_name: str
+
+
 class ApplicationOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -24,7 +31,7 @@ class ApplicationOut(BaseModel):
     class_type: str
     alcohol_content: str
     net_contents: str
-    image_original_name: str
+    images: list[LabelImageOut] = []
     overall_status: str
     created_at: datetime
 

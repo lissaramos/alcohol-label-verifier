@@ -177,6 +177,22 @@ main {
   background: var(--accent-soft);
 }
 
+.file-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.file-list li {
+  padding: 0.15rem 0;
+}
+
+.file-list:not(:empty) {
+  margin-bottom: 1rem;
+}
+
 .beverage-type-label {
   display: flex;
   flex-direction: column;
@@ -266,6 +282,12 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.queue-photo-count {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.8em;
 }
 
 .queue-status {
@@ -438,13 +460,36 @@ main {
   clear: both;
 }
 
-.detail-image {
-  max-width: 100%;
-  max-height: 320px;
+.detail-image-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.detail-image-item {
+  margin: 0;
+  flex: 1 1 200px;
+  max-width: 260px;
+}
+
+.detail-image-item img {
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
   border-radius: var(--radius-sm);
   display: block;
-  margin-bottom: 1rem;
   background: var(--surface-subtle);
+}
+
+.detail-image-item figcaption {
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .field-table {

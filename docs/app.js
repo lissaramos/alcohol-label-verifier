@@ -37,6 +37,7 @@ const apiStatus = document.getElementById("apiStatus");
 
 const fileInput = document.getElementById("fileInput");
 const fileDropText = document.getElementById("fileDropText");
+const fileListEl = document.getElementById("fileList");
 const addForm = document.getElementById("addForm");
 const beverageTypeInput = document.getElementById("beverageType");
 const brandNameInput = document.getElementById("brandName");
@@ -78,8 +79,17 @@ document.getElementById("saveApiBase").addEventListener("click", () => {
 });
 
 fileInput.addEventListener("change", () => {
-  fileDropText.textContent = fileInput.files[0]?.name || "Choose a label photo, or drop it here";
+  renderSelectedFiles();
 });
+
+function renderSelectedFiles() {
+  const files = Array.from(fileInput.files);
+  fileDropText.textContent =
+    files.length === 0
+      ? "Choose one or more label photos (JPEG or PNG)"
+      : `${files.length} photo${files.length > 1 ? "s" : ""} selected`;
+  fileListEl.innerHTML = files.map((f) => `<li>${escapeHtml(f.name)}</li>`).join("");
+}
 
 function updateAlcoholContentField() {
   // TTB does not federally require an ABV statement on beer/malt beverage
@@ -108,12 +118,12 @@ async function checkHealth() {
 
 addForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const file = fileInput.files[0];
-  if (!file) return;
+  const files = Array.from(fileInput.files);
+  if (files.length === 0) return;
 
   queue.push({
     id: ++queueIdCounter,
-    file,
+    files,
     beverage_type: beverageTypeInput.value,
     brand_name: brandNameInput.value.trim(),
     class_type: classTypeInput.value.trim(),
@@ -123,7 +133,7 @@ addForm.addEventListener("submit", (e) => {
   });
 
   addForm.reset();
-  fileDropText.textContent = "Choose a label photo, or drop it here";
+  renderSelectedFiles();
   updateAlcoholContentField();
   renderQueue();
 });
@@ -136,8 +146,9 @@ function renderQueue() {
   for (const item of queue) {
     const li = document.createElement("li");
     li.className = `queue-item queue-${item.status}`;
+    const photoCount = `${item.files.length} photo${item.files.length > 1 ? "s" : ""}`;
     li.innerHTML = `
-      <span class="queue-name">${escapeHtml(item.brand_name)}</span>
+      <span class="queue-name">${escapeHtml(item.brand_name)} <span class="queue-photo-count">(${photoCount})</span></span>
       <span class="queue-status">${queueStatusLabel(item.status)}</span>
       ${item.status === "queued" ? `<button class="btn btn-ghost queue-remove" data-id="${item.id}">Remove</button>` : ""}
     `;
@@ -204,7 +215,9 @@ verifyAllBtn.addEventListener("click", async () => {
 
 async function submitApplication(item) {
   const formData = new FormData();
-  formData.append("file", item.file);
+  for (const file of item.files) {
+    formData.append("files", file);
+  }
   formData.append("beverage_type", item.beverage_type);
   formData.append("brand_name", item.brand_name);
   formData.append("class_type", item.class_type);
@@ -240,10 +253,11 @@ function renderResults(applications) {
   for (const app of applications) {
     const li = document.createElement("li");
     li.className = "result-item";
+    const photoCount = app.images.length;
     li.innerHTML = `
       <span class="status-badge status-${app.overall_status}">${STATUS_LABELS[app.overall_status]}</span>
       <span class="result-name">${escapeHtml(app.brand_name)}</span>
-      <span class="result-subtitle">${escapeHtml(app.class_type)} · ${BEVERAGE_LABELS[app.beverage_type] || app.beverage_type}</span>
+      <span class="result-subtitle">${escapeHtml(app.class_type)} · ${BEVERAGE_LABELS[app.beverage_type] || app.beverage_type} · ${photoCount} photo${photoCount === 1 ? "" : "s"}</span>
     `;
     li.addEventListener("click", () => openDetail(app.id));
     resultsList.appendChild(li);
@@ -294,7 +308,18 @@ function renderDetail(app) {
       </div>
       <button id="deleteApp" class="btn btn-danger-ghost" data-id="${app.id}">Delete</button>
     </div>
-    <img class="detail-image" src="${getApiBase()}/applications/${app.id}/image" alt="${escapeHtml(app.brand_name)}" />
+    <div class="detail-image-gallery">
+      ${app.images
+        .map(
+          (img) => `
+        <figure class="detail-image-item">
+          <img src="${getApiBase()}/applications/${app.id}/images/${img.id}/file" alt="${escapeHtml(img.original_name)}" />
+          <figcaption>${escapeHtml(img.original_name)}</figcaption>
+        </figure>
+      `
+        )
+        .join("")}
+    </div>
     <table class="field-table">
       <thead>
         <tr><th>Field</th><th>Submitted</th><th>Found on label</th><th>Status</th><th></th></tr>

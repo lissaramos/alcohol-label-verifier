@@ -17,10 +17,6 @@ class Application(Base):
     alcohol_content: Mapped[str] = mapped_column(String)
     net_contents: Mapped[str] = mapped_column(String)
 
-    image_filename: Mapped[str] = mapped_column(String, unique=True)
-    image_original_name: Mapped[str] = mapped_column(String)
-    image_content_type: Mapped[str] = mapped_column(String)
-
     ocr_text: Mapped[str] = mapped_column(Text, default="")
     overall_status: Mapped[str] = mapped_column(String, default="needs_review")
 
@@ -28,9 +24,34 @@ class Application(Base):
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
 
+    images: Mapped[list["LabelImage"]] = relationship(
+        back_populates="application",
+        cascade="all, delete-orphan",
+        order_by="LabelImage.id",
+    )
     results: Mapped[list["VerificationResult"]] = relationship(
         back_populates="application", cascade="all, delete-orphan"
     )
+
+
+class LabelImage(Base):
+    """One photo of one physical label surface (front, back, neck, strip,
+    etc.) — TTB's own COLA guidance is to upload each surface as a separate
+    file rather than combining them into one image, since a combined photo
+    confused OCR line-ordering badly enough to break the government warning
+    match in testing.
+    """
+
+    __tablename__ = "label_images"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    application_id: Mapped[int] = mapped_column(ForeignKey("applications.id"))
+
+    filename: Mapped[str] = mapped_column(String, unique=True)
+    original_name: Mapped[str] = mapped_column(String)
+    content_type: Mapped[str] = mapped_column(String)
+
+    application: Mapped["Application"] = relationship(back_populates="images")
 
 
 class VerificationResult(Base):
