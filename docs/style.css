@@ -83,6 +83,20 @@ header {
   font-size: 1.1rem;
 }
 
+.connection-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.connection-status.ok {
+  color: var(--success);
+}
+
+.connection-status.err {
+  color: var(--danger);
+}
+
 h1 {
   font-size: 1.35rem;
   font-weight: 700;

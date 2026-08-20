@@ -11,6 +11,15 @@ class Application(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
 
+    # A random ID the frontend generates once per browser (localStorage, no
+    # login) so one visitor's queue/results aren't visible to another —
+    # there's a single shared database and originally no concept of "whose"
+    # data a row was, which meant every visitor saw everyone else's
+    # applications. Not real auth (nothing prevents a client from sending a
+    # different ID than its own), but sufficient to stop visitors from
+    # tripping over each other's test data, which was the actual problem.
+    session_id: Mapped[str] = mapped_column(String, index=True)
+
     beverage_type: Mapped[str] = mapped_column(String, default="distilled_spirits")
     brand_name: Mapped[str] = mapped_column(String)
     class_type: Mapped[str] = mapped_column(String)

@@ -3,7 +3,7 @@ import uuid
 from pathlib import Path
 
 import httpx
-from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -33,6 +33,21 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+def get_session_id(x_session_id: str = Header(...)) -> str:
+    if not x_session_id.strip():
+        raise HTTPException(400, "X-Session-Id header is required")
+    return x_session_id
+
+
+def _get_owned_application(
+    db: Session, application_id: int, session_id: str
+) -> models.Application:
+    application = db.get(models.Application, application_id)
+    if not application or application.session_id != session_id:
+        raise HTTPException(404, "Application not found")
+    return application
 
 
 def _apply_results(db: Session, application: models.Application, ocr_text: str) -> None:
@@ -79,6 +94,7 @@ async def create_application(
     net_contents: str = Form(...),
     name_address: str = Form(...),
     db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
 ):
     if beverage_type not in verification.BEVERAGE_TYPES:
         raise HTTPException(400, f"beverage_type must be one of {verification.BEVERAGE_TYPES}")
@@ -130,6 +146,7 @@ async def create_application(
     ocr_text = "\n\n".join(ocr_sections)
 
     application = models.Application(
+        session_id=session_id,
         beverage_type=beverage_type,
         brand_name=brand_name,
         class_type=class_type,
@@ -149,24 +166,35 @@ async def create_application(
 
 
 @app.get("/applications", response_model=list[schemas.ApplicationOut])
-def list_applications(db: Session = Depends(get_db)):
+def list_applications(
+    db: Session = Depends(get_db), session_id: str = Depends(get_session_id)
+):
     return (
         db.query(models.Application)
+        .filter(models.Application.session_id == session_id)
         .order_by(models.Application.created_at.desc())
         .all()
     )
 
 
 @app.get("/applications/{application_id}", response_model=schemas.ApplicationDetailOut)
-def get_application(application_id: int, db: Session = Depends(get_db)):
-    application = db.get(models.Application, application_id)
-    if not application:
-        raise HTTPException(404, "Application not found")
-    return application
+def get_application(
+    application_id: int,
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+):
+    return _get_owned_application(db, application_id, session_id)
 
 
 @app.get("/applications/{application_id}/images/{image_id}/file")
 def get_label_image_file(application_id: int, image_id: int, db: Session = Depends(get_db)):
+    # Deliberately not session-scoped like the other endpoints: this is
+    # loaded via a plain <img src>, which can't attach a custom header, and
+    # a query-string token isn't a great alternative (ends up in browser
+    # history/server logs). The list/detail/delete endpoints below — the
+    # ones that actually expose whose data is whose — are scoped; a bare
+    # image file requires already knowing its exact numeric ID, which isn't
+    # discoverable without session access to the parent application first.
     image = db.get(models.LabelImage, image_id)
     if not image or image.application_id != application_id:
         raise HTTPException(404, "Image not found")
@@ -177,10 +205,12 @@ def get_label_image_file(application_id: int, image_id: int, db: Session = Depen
 
 
 @app.delete("/applications/{application_id}", status_code=204)
-def delete_application(application_id: int, db: Session = Depends(get_db)):
-    application = db.get(models.Application, application_id)
-    if not application:
-        raise HTTPException(404, "Application not found")
+def delete_application(
+    application_id: int,
+    db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
+):
+    application = _get_owned_application(db, application_id, session_id)
     for image in application.images:
         path = STORAGE_DIR / image.filename
         if path.exists():
@@ -198,13 +228,12 @@ def override_result(
     result_id: int,
     payload: schemas.OverrideRequest,
     db: Session = Depends(get_db),
+    session_id: str = Depends(get_session_id),
 ):
     if payload.status not in (verification.STATUS_MATCH, verification.STATUS_MISMATCH):
         raise HTTPException(400, "status must be 'match' or 'mismatch'")
 
-    application = db.get(models.Application, application_id)
-    if not application:
-        raise HTTPException(404, "Application not found")
+    application = _get_owned_application(db, application_id, session_id)
 
     result = db.get(models.VerificationResult, result_id)
     if not result or result.application_id != application_id:

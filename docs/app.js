@@ -39,6 +39,7 @@ const BEVERAGE_LABELS = {
 };
 
 const connectionBanner = document.getElementById("connectionBanner");
+const connectionStatus = document.getElementById("connectionStatus");
 
 const fileInput = document.getElementById("fileInput");
 const fileDropText = document.getElementById("fileDropText");
@@ -71,6 +72,25 @@ function getApiBase() {
   return localStorage.getItem("label_verifier_api_base") || DEFAULT_API_BASE;
 }
 
+// A random ID generated once per browser so one visitor's queue/results
+// aren't visible to another — there's a single shared backend database and
+// no login, so without this every visitor would see everyone else's
+// applications (which is exactly what happened during testing). Not real
+// auth, just enough to stop visitors from tripping over each other's data.
+function getSessionId() {
+  let id = localStorage.getItem("label_verifier_session_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("label_verifier_session_id", id);
+  }
+  return id;
+}
+
+function apiFetch(path, options = {}) {
+  const headers = { ...(options.headers || {}), "X-Session-Id": getSessionId() };
+  return fetch(`${getApiBase()}${path}`, { ...options, headers });
+}
+
 fileInput.addEventListener("change", () => {
   renderSelectedFiles();
 });
@@ -98,9 +118,13 @@ updateAlcoholContentField();
 // The backend is on a free tier that spins down when idle, so a visitor's
 // first request of the day can take ~30s to wake it up. Rather than let
 // that look like a silent failure, show a plain-language banner while
-// waiting and retry a few times before giving up.
+// waiting and retry a few times before giving up. Once connected, a small
+// persistent label stays visible so the connection status is never a
+// mystery, and a periodic re-check keeps it accurate if the backend spins
+// down again mid-session.
 async function checkHealth() {
   showConnectionBanner("Connecting to the server — this can take up to 30 seconds if it's your first visit in a while…");
+  setConnectionStatus(null);
 
   const maxAttempts = 6;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -108,6 +132,7 @@ async function checkHealth() {
       const res = await fetch(`${getApiBase()}/health`);
       if (res.ok) {
         hideConnectionBanner();
+        setConnectionStatus(true);
         return;
       }
     } catch {
@@ -119,6 +144,20 @@ async function checkHealth() {
   }
 
   showConnectionBanner("Having trouble reaching the server. Try refreshing the page in a moment.");
+  setConnectionStatus(false);
+}
+
+function setConnectionStatus(connected) {
+  if (connected === true) {
+    connectionStatus.textContent = "● Connected to server";
+    connectionStatus.className = "connection-status ok";
+  } else if (connected === false) {
+    connectionStatus.textContent = "● Disconnected";
+    connectionStatus.className = "connection-status err";
+  } else {
+    connectionStatus.textContent = "";
+    connectionStatus.className = "connection-status";
+  }
 }
 
 function showConnectionBanner(message) {
@@ -129,6 +168,18 @@ function showConnectionBanner(message) {
 function hideConnectionBanner() {
   connectionBanner.classList.add("hidden");
 }
+
+// Keeps the status label accurate through a long session — the free-tier
+// backend can spin back down after ~15 minutes idle even after a
+// successful connection earlier in the visit.
+setInterval(async () => {
+  try {
+    const res = await fetch(`${getApiBase()}/health`);
+    setConnectionStatus(res.ok);
+  } catch {
+    setConnectionStatus(false);
+  }
+}, 60000);
 
 // --- Queue ---
 
@@ -242,7 +293,7 @@ async function submitApplication(item) {
   formData.append("net_contents", item.net_contents);
   formData.append("name_address", item.name_address);
 
-  const res = await fetch(`${getApiBase()}/applications`, { method: "POST", body: formData });
+  const res = await apiFetch("/applications", { method: "POST", body: formData });
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
@@ -251,7 +302,7 @@ async function submitApplication(item) {
 
 async function loadResults() {
   try {
-    const res = await fetch(`${getApiBase()}/applications`);
+    const res = await apiFetch("/applications");
     if (!res.ok) throw new Error();
     const applications = await res.json();
     renderResults(applications);
@@ -283,7 +334,7 @@ function renderResults(applications) {
 }
 
 async function openDetail(id) {
-  const res = await fetch(`${getApiBase()}/applications/${id}`);
+  const res = await apiFetch(`/applications/${id}`);
   const app = await res.json();
   renderDetail(app);
   detailOverlay.classList.remove("hidden");
@@ -358,7 +409,7 @@ function renderDetail(app) {
 }
 
 async function overrideResult(applicationId, resultId, status) {
-  await fetch(`${getApiBase()}/applications/${applicationId}/results/${resultId}/override`, {
+  await apiFetch(`/applications/${applicationId}/results/${resultId}/override`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
@@ -368,7 +419,7 @@ async function overrideResult(applicationId, resultId, status) {
 }
 
 async function deleteApplication(id) {
-  await fetch(`${getApiBase()}/applications/${id}`, { method: "DELETE" });
+  await apiFetch(`/applications/${id}`, { method: "DELETE" });
   detailOverlay.classList.add("hidden");
   loadResults();
 }
