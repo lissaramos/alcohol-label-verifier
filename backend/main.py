@@ -43,6 +43,7 @@ def _apply_results(db: Session, application: models.Application, ocr_text: str) 
         verification.FIELD_CLASS_TYPE: application.class_type,
         verification.FIELD_ALCOHOL_CONTENT: application.alcohol_content,
         verification.FIELD_NET_CONTENTS: application.net_contents,
+        verification.FIELD_NAME_ADDRESS: application.name_address,
     }
     field_results = verification.run_verification(fields, ocr_text, application.beverage_type)
     application.overall_status = verification.compute_overall_status(field_results)
@@ -76,6 +77,7 @@ async def create_application(
     class_type: str = Form(...),
     alcohol_content: str = Form(""),
     net_contents: str = Form(...),
+    name_address: str = Form(...),
     db: Session = Depends(get_db),
 ):
     if beverage_type not in verification.BEVERAGE_TYPES:
@@ -133,6 +135,7 @@ async def create_application(
         class_type=class_type,
         alcohol_content=alcohol_content,
         net_contents=net_contents,
+        name_address=name_address,
     )
     application.images = saved_images
     db.add(application)

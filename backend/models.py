@@ -16,6 +16,7 @@ class Application(Base):
     class_type: Mapped[str] = mapped_column(String)
     alcohol_content: Mapped[str] = mapped_column(String)
     net_contents: Mapped[str] = mapped_column(String)
+    name_address: Mapped[str] = mapped_column(String)
 
     ocr_text: Mapped[str] = mapped_column(Text, default="")
     overall_status: Mapped[str] = mapped_column(String, default="needs_review")

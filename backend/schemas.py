@@ -31,6 +31,7 @@ class ApplicationOut(BaseModel):
     class_type: str
     alcohol_content: str
     net_contents: str
+    name_address: str
     images: list[LabelImageOut] = []
     overall_status: str
     created_at: datetime

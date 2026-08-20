@@ -8,6 +8,7 @@ FIELD_ALCOHOL_CONTENT = "alcohol_content"
 FIELD_NET_CONTENTS = "net_contents"
 FIELD_GOVERNMENT_WARNING = "government_warning"
 FIELD_SULFITE_DECLARATION = "sulfite_declaration"
+FIELD_NAME_ADDRESS = "name_address"
 
 BEVERAGE_DISTILLED_SPIRITS = "distilled_spirits"
 BEVERAGE_WINE = "wine"
@@ -37,6 +38,10 @@ _PERCENT_PATTERN = re.compile(r"(\d{1,3}(?:\.\d+)?)\s*%")
 # unit and must come before the bare "oz" alternative.
 _VOLUME_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(fl\.?\s*oz\.?|ml|l|oz)\b", re.IGNORECASE)
 _TABLE_OR_LIGHT_WINE_PATTERN = re.compile(r"\b(table|light)\s+wine\b", re.IGNORECASE)
+# TTB explicitly disallows "ABV" as an abbreviation of "alcohol by volume" in
+# the mandatory alcohol content statement — only "Alcohol ___% by volume" or
+# "___% Alc./Vol." style wording is acceptable.
+_ABV_ABBREVIATION_PATTERN = re.compile(r"\bABV\b", re.IGNORECASE)
 
 _REVIEW_THRESHOLD = 0.85
 _MISMATCH_FLOOR = 0.5
@@ -165,15 +170,22 @@ def match_alcohol_content(submitted: str, ocr_text: str, beverage_type: str) -> 
         if status != STATUS_MATCH and 7 <= submitted_value <= 14:
             phrase_match = _TABLE_OR_LIGHT_WINE_PATTERN.search(ocr_text)
             if phrase_match:
-                return FieldResult("", submitted, phrase_match.group(0), STATUS_MATCH)
+                extracted, status = phrase_match.group(0), STATUS_MATCH
+    else:
+        # Distilled spirits (default) and beer-with-a-stated-ABV both expect
+        # an accurate, closely-matching statement.
+        extracted, _, status = _match_percent_with_tolerance(
+            submitted_value, ocr_text, _SPIRITS_MATCH_TOLERANCE, _SPIRITS_REVIEW_TOLERANCE
+        )
 
-        return FieldResult("", submitted, extracted, status)
+    # A correct number doesn't matter if the label states it in a disallowed
+    # way — "ABV" is explicitly not an acceptable abbreviation. Only
+    # downgrades an otherwise-clean match; a number that's already wrong
+    # doesn't need a second reason to be flagged.
+    if status == STATUS_MATCH and _ABV_ABBREVIATION_PATTERN.search(ocr_text):
+        status = STATUS_REVIEW
+        extracted = f'{extracted} (uses "ABV" — TTB does not allow this as an abbreviation)'
 
-    # Distilled spirits (default) and beer-with-a-stated-ABV both expect an
-    # accurate, closely-matching statement.
-    extracted, _, status = _match_percent_with_tolerance(
-        submitted_value, ocr_text, _SPIRITS_MATCH_TOLERANCE, _SPIRITS_REVIEW_TOLERANCE
-    )
     return FieldResult("", submitted, extracted, status)
 
 
@@ -212,10 +224,12 @@ def match_government_warning(ocr_text: str) -> FieldResult:
 
 
 def match_sulfite_declaration(ocr_text: str) -> FieldResult:
-    """Wine containing >= 10ppm sulfur dioxide must carry a "Contains
-    Sulfites" statement (27 CFR 4.32(e)). We can't tell from the label alone
-    whether the product actually contains that much — so a missing statement
-    is surfaced for agent review rather than treated as an automatic failure.
+    """Wine and malt beverages containing >= 10ppm sulfur dioxide must carry
+    a "Contains Sulfites" statement (27 CFR 4.32(e) for wine; TTB's malt
+    beverage manual lists the same disclosure "if applicable"). We can't
+    tell from the label alone whether the product actually contains that
+    much — so a missing statement is surfaced for agent review rather than
+    treated as an automatic failure.
     """
     required = "Contains Sulfites"
     collapsed_ocr = _collapse_whitespace(ocr_text)
@@ -239,6 +253,14 @@ def run_verification(
         match_alcohol_content(application_fields[FIELD_ALCOHOL_CONTENT], ocr_text, beverage_type),
         match_net_contents(application_fields[FIELD_NET_CONTENTS], ocr_text),
         match_government_warning(ocr_text),
+        # Name and address of the bottler/producer is required on "any
+        # label" across all three beverage categories — no conditional
+        # logic needed, unlike the other TTB fields we looked at and
+        # decided to leave out (age statement, country of origin, etc.),
+        # which all depend on knowing something the application form
+        # doesn't currently ask (is this an import? is it aged? does it use
+        # color additives?).
+        match_text_field(application_fields[FIELD_NAME_ADDRESS], ocr_text),
     ]
     field_names = [
         FIELD_BRAND_NAME,
@@ -246,9 +268,10 @@ def run_verification(
         FIELD_ALCOHOL_CONTENT,
         FIELD_NET_CONTENTS,
         FIELD_GOVERNMENT_WARNING,
+        FIELD_NAME_ADDRESS,
     ]
 
-    if beverage_type == BEVERAGE_WINE:
+    if beverage_type in (BEVERAGE_WINE, BEVERAGE_BEER):
         results.append(match_sulfite_declaration(ocr_text))
         field_names.append(FIELD_SULFITE_DECLARATION)
 

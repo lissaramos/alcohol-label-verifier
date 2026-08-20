@@ -13,6 +13,7 @@ const FIELD_LABELS = {
   net_contents: "Net contents",
   government_warning: "Government warning",
   sulfite_declaration: "Sulfite declaration",
+  name_address: "Name and address",
 };
 
 const STATUS_LABELS = {
@@ -45,6 +46,7 @@ const classTypeInput = document.getElementById("classType");
 const alcoholContentInput = document.getElementById("alcoholContent");
 const alcoholContentLabel = document.getElementById("alcoholContentLabel");
 const netContentsInput = document.getElementById("netContents");
+const nameAddressInput = document.getElementById("nameAddress");
 
 const queueWrap = document.getElementById("queueWrap");
 const queueCount = document.getElementById("queueCount");
@@ -129,6 +131,7 @@ addForm.addEventListener("submit", (e) => {
     class_type: classTypeInput.value.trim(),
     alcohol_content: alcoholContentInput.value.trim(),
     net_contents: netContentsInput.value.trim(),
+    name_address: nameAddressInput.value.trim(),
     status: "queued",
   });
 
@@ -223,6 +226,7 @@ async function submitApplication(item) {
   formData.append("class_type", item.class_type);
   formData.append("alcohol_content", item.alcohol_content);
   formData.append("net_contents", item.net_contents);
+  formData.append("name_address", item.name_address);
 
   const res = await fetch(`${getApiBase()}/applications`, { method: "POST", body: formData });
   if (!res.ok) throw new Error(await res.text());
