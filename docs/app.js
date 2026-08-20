@@ -57,6 +57,8 @@ const queueWrap = document.getElementById("queueWrap");
 const queueCount = document.getElementById("queueCount");
 const queueList = document.getElementById("queueList");
 const verifyAllBtn = document.getElementById("verifyAllBtn");
+const addFormSubmit = document.getElementById("addFormSubmit");
+const cancelEditBtn = document.getElementById("cancelEditBtn");
 
 const resultsEmpty = document.getElementById("resultsEmpty");
 const resultsList = document.getElementById("resultsList");
@@ -67,6 +69,7 @@ const closeDetailBtn = document.getElementById("closeDetail");
 
 let queue = [];
 let queueIdCounter = 0;
+let editingId = null;
 
 function getApiBase() {
   return localStorage.getItem("label_verifier_api_base") || DEFAULT_API_BASE;
@@ -188,8 +191,7 @@ addForm.addEventListener("submit", (e) => {
   const files = Array.from(fileInput.files);
   if (files.length === 0) return;
 
-  queue.push({
-    id: ++queueIdCounter,
+  const fields = {
     files,
     beverage_type: beverageTypeInput.value,
     brand_name: brandNameInput.value.trim(),
@@ -197,9 +199,55 @@ addForm.addEventListener("submit", (e) => {
     alcohol_content: alcoholContentInput.value.trim(),
     net_contents: netContentsInput.value.trim(),
     name_address: nameAddressInput.value.trim(),
-    status: "queued",
-  });
+  };
 
+  if (editingId !== null) {
+    const item = queue.find((q) => q.id === editingId);
+    if (item) Object.assign(item, fields);
+    stopEditing();
+  } else {
+    queue.push({ id: ++queueIdCounter, status: "queued", ...fields });
+  }
+
+  addForm.reset();
+  renderSelectedFiles();
+  updateAlcoholContentField();
+  renderQueue();
+});
+
+function startEditQueueItem(item) {
+  editingId = item.id;
+
+  beverageTypeInput.value = item.beverage_type;
+  brandNameInput.value = item.brand_name;
+  classTypeInput.value = item.class_type;
+  alcoholContentInput.value = item.alcohol_content;
+  netContentsInput.value = item.net_contents;
+  nameAddressInput.value = item.name_address;
+  updateAlcoholContentField();
+
+  // File inputs can't be assigned a plain array of File objects directly,
+  // but a DataTransfer's .files list can be — this is the standard way to
+  // programmatically repopulate one.
+  const dt = new DataTransfer();
+  item.files.forEach((f) => dt.items.add(f));
+  fileInput.files = dt.files;
+  renderSelectedFiles();
+
+  addFormSubmit.textContent = "Save changes";
+  cancelEditBtn.classList.remove("hidden");
+  renderQueue();
+  addForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function stopEditing() {
+  editingId = null;
+  addFormSubmit.textContent = "Add to queue";
+  cancelEditBtn.classList.add("hidden");
+}
+
+cancelEditBtn.addEventListener("click", () => {
+  stopEditing();
   addForm.reset();
   renderSelectedFiles();
   updateAlcoholContentField();
@@ -213,16 +261,28 @@ function renderQueue() {
 
   for (const item of queue) {
     const li = document.createElement("li");
-    li.className = `queue-item queue-${item.status}`;
+    li.className = `queue-item queue-${item.status}${item.id === editingId ? " queue-editing" : ""}`;
     const photoCount = `${item.files.length} photo${item.files.length > 1 ? "s" : ""}`;
     li.innerHTML = `
       <span class="queue-name">${escapeHtml(item.brand_name)} <span class="queue-photo-count">(${photoCount})</span></span>
       <span class="queue-status">${queueStatusLabel(item.status)}</span>
-      ${item.status === "queued" ? `<button class="btn btn-ghost queue-remove" data-id="${item.id}">Remove</button>` : ""}
+      ${item.status === "queued" ? `
+        <span class="queue-actions">
+          <button class="btn btn-ghost queue-edit" data-id="${item.id}">Edit</button>
+          <button class="btn btn-ghost queue-remove" data-id="${item.id}">Remove</button>
+        </span>
+      ` : ""}
     `;
     if (item.status === "queued") {
+      li.querySelector(".queue-edit").addEventListener("click", () => startEditQueueItem(item));
       li.querySelector(".queue-remove").addEventListener("click", () => {
         queue = queue.filter((q) => q.id !== item.id);
+        if (item.id === editingId) {
+          stopEditing();
+          addForm.reset();
+          renderSelectedFiles();
+          updateAlcoholContentField();
+        }
         renderQueue();
       });
     }
@@ -343,7 +403,7 @@ async function openDetail(id) {
 function renderDetail(app) {
   const rows = app.results
     .map((r) => {
-      const canOverride = r.status !== "match" && r.status !== "not_applicable";
+      const canOverride = r.status !== "not_applicable";
       const notApplicable = r.status === "not_applicable";
       const foundCell = notApplicable
         ? "<em>not required for this beverage type</em>"
@@ -358,8 +418,8 @@ function renderDetail(app) {
           <td><span class="status-pill status-${r.status}">${STATUS_LABELS[r.status]}</span>${r.agent_override ? ' <span class="override-tag">agent reviewed</span>' : ""}</td>
           <td>
             ${canOverride ? `
-              <button class="btn btn-ghost override-btn" data-id="${r.id}" data-status="match">Mark match</button>
-              <button class="btn btn-ghost override-btn" data-id="${r.id}" data-status="mismatch">Mark mismatch</button>
+              <button class="btn btn-ghost override-btn${r.status === "match" ? " override-active" : ""}" data-id="${r.id}" data-status="match">Mark match</button>
+              <button class="btn btn-ghost override-btn${r.status === "mismatch" ? " override-active" : ""}" data-id="${r.id}" data-status="mismatch">Mark mismatch</button>
             ` : ""}
           </td>
         </tr>

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Label Verifier</title>
-  <link rel="stylesheet" href="style.css?v=9" />
+  <title>Alcohol Label Verifier</title>
+  <link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <header>
@@ -56,7 +56,10 @@
           </label>
         </div>
 
-        <button type="submit" class="btn btn-secondary">Add to queue</button>
+        <div class="add-form-actions">
+          <button type="submit" id="addFormSubmit" class="btn btn-secondary">Add to queue</button>
+          <button type="button" id="cancelEditBtn" class="btn btn-ghost hidden">Cancel edit</button>
+        </div>
       </form>
 
       <div id="queueWrap" class="hidden">
@@ -83,6 +86,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

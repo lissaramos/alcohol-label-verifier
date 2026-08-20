@@ -290,6 +290,21 @@ main {
   font-size: 0.78rem;
 }
 
+.queue-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.queue-item.queue-editing {
+  border-color: var(--accent);
+}
+
+.add-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .queue-processing .queue-status {
   color: var(--accent);
 }
@@ -520,6 +535,13 @@ main {
 .override-btn {
   padding: 0.3rem 0.55rem;
   font-size: 0.72rem;
+}
+
+.override-btn.override-active {
+  background: var(--surface-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
 }
 
 /* Temporary debug aid — remove once OCR quality is no longer in question. */
