@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Label Verifier</title>
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
   <header>
@@ -12,13 +12,9 @@
       <span class="brand-mark">◆</span>
       <h1>Label Verifier</h1>
     </div>
-    <div class="api-config">
-      <label for="apiBase">API base URL</label>
-      <input id="apiBase" type="text" placeholder="http://localhost:8000" />
-      <button id="saveApiBase" class="btn btn-ghost">Save</button>
-      <span id="apiStatus" class="status"></span>
-    </div>
   </header>
+
+  <div id="connectionBanner" class="connection-banner hidden"></div>
 
   <main>
     <section class="panel">
@@ -86,6 +82,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

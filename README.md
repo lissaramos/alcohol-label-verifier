@@ -103,7 +103,7 @@ cd extraction-service && uvicorn main:app --reload --port 9000
 cd docs && python3 -m http.server 5500
 ```
 
-The frontend's "API base URL" field (top right) points at the backend — defaults to `http://localhost:8000` and remembers your choice.
+The frontend's backend URL is hardcoded to the deployed Render backend (`docs/app.js`, `DEFAULT_API_BASE`) so visitors never need to configure anything. For local development, override it without touching the UI: run `localStorage.setItem("label_verifier_api_base", "http://localhost:8000")` in the browser console, then reload.
 
 The backend finds the extraction service via the `EXTRACTION_SERVICE_URL` env var, default `http://localhost:9000`.
 
@@ -112,5 +112,5 @@ The extraction service's first startup downloads the PP-OCRv5 model weights (~30
 ## Deploying
 
 - **Frontend**: In the repo's Settings → Pages, set Source to `Deploy from a branch`, branch `main`, folder `/docs`. Live at `https://<your-username>.github.io/alcohol-label-verifier/`.
-- **Backend**: deploy anywhere that runs Python (Render, Railway, Fly.io, etc.). No system dependencies required.
-- **Extraction service**: deploy via the included `extraction-service/Dockerfile` rather than a plain Python buildpack — it bakes the PP-OCRv5 model weights into the image at build time (`RUN python -c "import main"`), so the running container never needs outbound internet access, matching the firewall constraint from the interviews. Building the image does need internet access. Point the backend's `EXTRACTION_SERVICE_URL` at wherever this ends up, and point the frontend's "API base URL" at the deployed backend. **Needs at least ~2GB RAM** (confirmed by an actual OOM crash on a 512MB tier — see the OCR section above for the profiling numbers behind that). **Before relying on this in front of real users, re-run the concurrency benchmark from the OCR section above on the actual host** — it was measured on a 16-core dev machine, and a small cloud instance will hit the CPU contention ceiling sooner.
+- **Backend**: deploy anywhere that runs Python (Render, Railway, Fly.io, etc.). No system dependencies required. On Render's free tier this spins down when idle, so a visitor's first request after a quiet period can take ~30s to wake it up — the frontend shows a plain-language "connecting" banner during this rather than letting it look like a silent failure.
+- **Extraction service**: deploy via the included `extraction-service/Dockerfile` rather than a plain Python buildpack — it bakes the PP-OCRv5 model weights into the image at build time (`RUN python -c "import main"`), so the running container never needs outbound internet access, matching the firewall constraint from the interviews. Building the image does need internet access. Point the backend's `EXTRACTION_SERVICE_URL` at wherever this ends up. If the backend's URL changes, update `DEFAULT_API_BASE` in `docs/app.js` to match. **Needs at least ~2GB RAM** (confirmed by an actual OOM crash on a 512MB tier — see the OCR section above for the profiling numbers behind that). **Before relying on this in front of real users, re-run the concurrency benchmark from the OCR section above on the actual host** — it was measured on a 16-core dev machine, and a small cloud instance will hit the CPU contention ceiling sooner.

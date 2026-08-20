@@ -106,35 +106,16 @@ h3 {
   margin: 0 0 1rem;
 }
 
-.api-config {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
-
-.api-config input {
-  width: 220px;
-  padding: 0.45rem 0.7rem;
+.connection-banner {
+  max-width: 1100px;
+  margin: 0 0 1.25rem;
+  padding: 0.65rem 1rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.82rem;
-}
-
-.api-config input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
-}
-
-.status {
-  min-width: 88px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.85rem;
   font-weight: 600;
 }
-.status.ok { color: var(--success); }
-.status.err { color: var(--danger); }
 
 main {
   display: grid;

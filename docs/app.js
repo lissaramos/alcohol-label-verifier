@@ -1,4 +1,9 @@
-const DEFAULT_API_BASE = "http://localhost:8000";
+// Hardcoded so visitors on the deployed site never need to know or enter a
+// backend URL. For local development, override by running
+// localStorage.setItem("label_verifier_api_base", "http://localhost:8000")
+// in the browser console, then reloading — no UI control for this
+// intentionally, since it'd have no purpose for a real visitor.
+const DEFAULT_API_BASE = "https://alcohol-label-verifier-vzt0.onrender.com";
 // PP-OCRv5 is CPU-bound and doesn't parallelize well: benchmarking showed 2
 // concurrent extractions already pushing per-request latency to ~5s (the
 // hard budget from the interviews), and 4 concurrent pushing it to ~10s.
@@ -33,8 +38,7 @@ const BEVERAGE_LABELS = {
   beer: "Beer / malt beverage",
 };
 
-const apiBaseInput = document.getElementById("apiBase");
-const apiStatus = document.getElementById("apiStatus");
+const connectionBanner = document.getElementById("connectionBanner");
 
 const fileInput = document.getElementById("fileInput");
 const fileDropText = document.getElementById("fileDropText");
@@ -67,19 +71,6 @@ function getApiBase() {
   return localStorage.getItem("label_verifier_api_base") || DEFAULT_API_BASE;
 }
 
-function setApiBase(url) {
-  localStorage.setItem("label_verifier_api_base", url.replace(/\/$/, ""));
-}
-
-apiBaseInput.value = getApiBase();
-
-document.getElementById("saveApiBase").addEventListener("click", () => {
-  setApiBase(apiBaseInput.value.trim() || DEFAULT_API_BASE);
-  apiBaseInput.value = getApiBase();
-  checkHealth();
-  loadResults();
-});
-
 fileInput.addEventListener("change", () => {
   renderSelectedFiles();
 });
@@ -104,16 +95,39 @@ function updateAlcoholContentField() {
 beverageTypeInput.addEventListener("change", updateAlcoholContentField);
 updateAlcoholContentField();
 
+// The backend is on a free tier that spins down when idle, so a visitor's
+// first request of the day can take ~30s to wake it up. Rather than let
+// that look like a silent failure, show a plain-language banner while
+// waiting and retry a few times before giving up.
 async function checkHealth() {
-  try {
-    const res = await fetch(`${getApiBase()}/health`);
-    if (!res.ok) throw new Error();
-    apiStatus.textContent = "connected";
-    apiStatus.className = "status ok";
-  } catch {
-    apiStatus.textContent = "unreachable";
-    apiStatus.className = "status err";
+  showConnectionBanner("Connecting to the server — this can take up to 30 seconds if it's your first visit in a while…");
+
+  const maxAttempts = 6;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(`${getApiBase()}/health`);
+      if (res.ok) {
+        hideConnectionBanner();
+        return;
+      }
+    } catch {
+      // keep retrying below
+    }
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
   }
+
+  showConnectionBanner("Having trouble reaching the server. Try refreshing the page in a moment.");
+}
+
+function showConnectionBanner(message) {
+  connectionBanner.textContent = message;
+  connectionBanner.classList.remove("hidden");
+}
+
+function hideConnectionBanner() {
+  connectionBanner.classList.add("hidden");
 }
 
 // --- Queue ---
@@ -244,7 +258,7 @@ async function loadResults() {
   } catch {
     resultsEmpty.classList.remove("hidden");
     resultsList.classList.add("hidden");
-    resultsEmpty.querySelector("p").textContent = "Could not load results. Check the API base URL above.";
+    resultsEmpty.querySelector("p").textContent = "Could not load results. Try refreshing the page.";
   }
 }
 
