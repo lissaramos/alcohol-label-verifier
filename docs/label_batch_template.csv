@@ -1,0 +1,4 @@
+beverage_type,brand_name,class_type,alcohol_content,net_contents,name_address,images
+distilled_spirits,Old Tom Distillery,Kentucky Straight Bourbon Whiskey,45% Alc./Vol. (90 Proof),750 mL,"Old Tom Distillery, Frankfort, KY",front.jpg;back.jpg
+wine,Sunset Ridge Winery,Cabernet Sauvignon,13.5% Alc./Vol.,750 mL,"Sunset Ridge Winery, Napa, CA",front.jpg
+beer,Riverbend Brewing,India Pale Ale,,12 FL OZ,"Riverbend Brewing, Portland, OR",front.jpg;back.jpg

@@ -341,6 +341,215 @@ verifyAllBtn.addEventListener("click", async () => {
   loadResults();
 });
 
+// --- Bulk import (CSV) ---
+
+const CSV_COLUMNS = ["beverage_type", "brand_name", "class_type", "alcohol_content", "net_contents", "name_address", "images"];
+
+const BEVERAGE_TYPE_ALIASES = {
+  distilled_spirits: "distilled_spirits",
+  spirits: "distilled_spirits",
+  liquor: "distilled_spirits",
+  "distilled spirits": "distilled_spirits",
+  wine: "wine",
+  beer: "beer",
+  malt: "beer",
+  "malt beverage": "beer",
+  "beer / malt beverage": "beer",
+};
+
+const csvFileInput = document.getElementById("csvFileInput");
+const csvImagesInput = document.getElementById("csvImagesInput");
+const csvImportBtn = document.getElementById("csvImportBtn");
+const csvImportSummary = document.getElementById("csvImportSummary");
+
+// Hand-rolled RFC 4180 parser (quoted fields, embedded commas/quotes/newlines).
+// Name/Address values routinely contain commas ("Old Tom Distillery, Frankfort,
+// KY"), so a naive split(",") would silently corrupt those rows.
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+  let i = 0;
+
+  while (i < text.length) {
+    const char = text[i];
+    if (inQuotes) {
+      if (char === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i += 2;
+        } else {
+          inQuotes = false;
+          i++;
+        }
+      } else {
+        field += char;
+        i++;
+      }
+      continue;
+    }
+    if (char === '"') {
+      inQuotes = true;
+      i++;
+    } else if (char === ",") {
+      row.push(field);
+      field = "";
+      i++;
+    } else if (char === "\r") {
+      i++;
+    } else if (char === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+      i++;
+    } else {
+      field += char;
+      i++;
+    }
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows.filter((r) => !(r.length === 1 && r[0].trim() === ""));
+}
+
+function normalizeBeverageType(raw) {
+  return BEVERAGE_TYPE_ALIASES[raw.trim().toLowerCase()] || null;
+}
+
+// Parses raw CSV text into validated row objects, collecting a human-readable
+// error per bad row rather than failing the whole import on one mistake.
+function parseCsvRows(text) {
+  const rows = parseCsv(text);
+  if (rows.length === 0) return { entries: [], errors: ["The CSV file is empty."] };
+
+  const headers = rows[0].map((h) => h.trim().toLowerCase());
+  const missingColumns = CSV_COLUMNS.filter((c) => !headers.includes(c));
+  if (missingColumns.length > 0) {
+    return {
+      entries: [],
+      errors: [`Missing required column(s): ${missingColumns.join(", ")}. Expected headers: ${CSV_COLUMNS.join(", ")}.`],
+    };
+  }
+
+  const colIndex = {};
+  headers.forEach((h, idx) => {
+    colIndex[h] = idx;
+  });
+
+  const entries = [];
+  const errors = [];
+
+  for (let r = 1; r < rows.length; r++) {
+    const raw = rows[r];
+    const rowNum = r + 1; // 1-indexed, header is row 1
+    const get = (col) => (raw[colIndex[col]] || "").trim();
+
+    const beverageTypeRaw = get("beverage_type");
+    const beverageType = normalizeBeverageType(beverageTypeRaw);
+    const brandName = get("brand_name");
+    const classType = get("class_type");
+    const alcoholContent = get("alcohol_content");
+    const netContents = get("net_contents");
+    const nameAddress = get("name_address");
+    const imagesRaw = get("images");
+
+    const rowErrors = [];
+    if (!beverageType) rowErrors.push(`unrecognized beverage_type "${beverageTypeRaw}" (expected distilled_spirits, wine, or beer)`);
+    if (!brandName) rowErrors.push("missing brand_name");
+    if (!classType) rowErrors.push("missing class_type");
+    if (!netContents) rowErrors.push("missing net_contents");
+    if (!nameAddress) rowErrors.push("missing name_address");
+    if (beverageType && beverageType !== "beer" && !alcoholContent) rowErrors.push("missing alcohol_content");
+    if (!imagesRaw) rowErrors.push("missing images (semicolon-separated filenames)");
+
+    if (rowErrors.length > 0) {
+      errors.push(`Row ${rowNum}: ${rowErrors.join("; ")}`);
+      continue;
+    }
+
+    entries.push({
+      rowNum,
+      beverage_type: beverageType,
+      brand_name: brandName,
+      class_type: classType,
+      alcohol_content: alcoholContent,
+      net_contents: netContents,
+      name_address: nameAddress,
+      filenames: imagesRaw.split(";").map((f) => f.trim()).filter(Boolean),
+    });
+  }
+
+  return { entries, errors };
+}
+
+csvImportBtn.addEventListener("click", async () => {
+  const csvFile = csvFileInput.files[0];
+  if (!csvFile) {
+    csvImportSummary.innerHTML = `<p class="csv-error">Choose a CSV file first.</p>`;
+    return;
+  }
+
+  const imagesByName = new Map();
+  for (const f of Array.from(csvImagesInput.files)) {
+    imagesByName.set(f.name.toLowerCase(), f);
+  }
+
+  const text = await csvFile.text();
+  const { entries, errors } = parseCsvRows(text);
+  const rowErrors = [...errors];
+  let added = 0;
+
+  for (const entry of entries) {
+    const matchedFiles = [];
+    const missingFilenames = [];
+    for (const filename of entry.filenames) {
+      const match = imagesByName.get(filename.toLowerCase());
+      if (match) matchedFiles.push(match);
+      else missingFilenames.push(filename);
+    }
+
+    if (missingFilenames.length > 0) {
+      rowErrors.push(`Row ${entry.rowNum}: photo(s) not found among selected files: ${missingFilenames.join(", ")}`);
+      continue;
+    }
+
+    queue.push({
+      id: ++queueIdCounter,
+      files: matchedFiles,
+      beverage_type: entry.beverage_type,
+      brand_name: entry.brand_name,
+      class_type: entry.class_type,
+      alcohol_content: entry.alcohol_content,
+      net_contents: entry.net_contents,
+      name_address: entry.name_address,
+      status: "queued",
+    });
+    added++;
+  }
+
+  renderQueue();
+
+  const summaryParts = [];
+  if (added > 0) {
+    summaryParts.push(`<p class="csv-success">Added ${added} label${added === 1 ? "" : "s"} to the queue.</p>`);
+  }
+  if (rowErrors.length > 0) {
+    summaryParts.push(
+      `<p class="csv-error">${rowErrors.length} row${rowErrors.length === 1 ? "" : "s"} skipped:</p><ul class="csv-error-list">${rowErrors
+        .map((e) => `<li>${escapeHtml(e)}</li>`)
+        .join("")}</ul>`
+    );
+  }
+  csvImportSummary.innerHTML = summaryParts.join("") || `<p class="csv-error">No valid rows found.</p>`;
+
+  csvFileInput.value = "";
+  csvImagesInput.value = "";
+});
+
 async function submitApplication(item) {
   const formData = new FormData();
   for (const file of item.files) {

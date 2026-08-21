@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Alcohol Label Verifier</title>
-  <link rel="stylesheet" href="style.css?v=10" />
+  <link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
   <header>
@@ -62,6 +62,19 @@
         </div>
       </form>
 
+      <details class="bulk-import">
+        <summary>Bulk import from CSV</summary>
+        <p class="hint">Upload a CSV listing multiple labels, plus all the photos it references — each row's <code>images</code> column is matched to a selected photo by filename. <a href="label_batch_template.csv" download>Download a template</a>.</p>
+        <label class="bulk-import-field">CSV file
+          <input id="csvFileInput" type="file" accept=".csv,text/csv" />
+        </label>
+        <label class="bulk-import-field">Label photos (JPEG or PNG)
+          <input id="csvImagesInput" type="file" accept="image/jpeg,image/png" multiple />
+        </label>
+        <button type="button" id="csvImportBtn" class="btn btn-secondary">Import CSV</button>
+        <div id="csvImportSummary" class="csv-import-summary"></div>
+      </details>
+
       <div id="queueWrap" class="hidden">
         <h3>Queue (<span id="queueCount">0</span>)</h3>
         <ul id="queueList" class="queue-list"></ul>
@@ -86,6 +99,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
