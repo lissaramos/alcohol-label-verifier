@@ -4,93 +4,121 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Alcohol Label Verifier</title>
-  <link rel="stylesheet" href="style.css?v=11" />
+  <link rel="stylesheet" href="style.css?v=12" />
 </head>
 <body>
-  <header>
-    <div class="brand">
+  <header class="topbar">
+    <div class="topbar-brand">
       <span class="brand-mark">◆</span>
-      <h1>Alcohol Label Verifier</h1>
+      <span class="topbar-title">Alcohol Label Verifier</span>
     </div>
+    <span id="pageLabel" class="topbar-page-label">Verify Labels</span>
     <span id="connectionStatus" class="connection-status"></span>
   </header>
 
   <div id="connectionBanner" class="connection-banner hidden"></div>
 
-  <main>
-    <section class="panel">
-      <h2>1. Add a label to verify</h2>
-      <p class="hint">Enter what was submitted on the application, and upload a photo for each label surface (front, back, neck, strip) — one per photo, not combined into one image. The government warning is checked automatically — no need to enter it.</p>
+  <div class="app-shell">
+    <nav class="sidebar">
+      <ul class="sidebar-nav">
+        <li>
+          <a href="#verify" class="sidebar-link" data-page="verify">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="6" y="4" width="12" height="17" rx="2" />
+              <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+            Verify Labels
+          </a>
+        </li>
+        <li>
+          <a href="#results" class="sidebar-link" data-page="results">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="4" y="10" width="4" height="10" rx="1" />
+              <rect x="10" y="6" width="4" height="14" rx="1" />
+              <rect x="16" y="13" width="4" height="7" rx="1" />
+            </svg>
+            Results
+          </a>
+        </li>
+      </ul>
+    </nav>
 
-      <form id="addForm" class="add-form">
-        <label class="file-drop" for="fileInput">
-          <span id="fileDropText">Choose one or more label photos (JPEG or PNG)</span>
-        </label>
-        <input id="fileInput" type="file" accept="image/jpeg,image/png" multiple required hidden />
-        <ul id="fileList" class="file-list"></ul>
+    <main class="app-main">
+      <section id="page-verify" class="page panel">
+        <h2>Verify Labels</h2>
+        <p class="hint">Enter what was submitted on the application, and upload a photo for each label surface (front, back, neck, strip) — one per photo, not combined into one image. The government warning is checked automatically — no need to enter it.</p>
 
-        <label class="beverage-type-label">Beverage type
-          <select id="beverageType" class="beverage-type-select">
-            <option value="distilled_spirits">Distilled spirits</option>
-            <option value="wine">Wine</option>
-            <option value="beer">Beer / malt beverage</option>
-          </select>
-        </label>
+        <form id="addForm" class="add-form">
+          <label class="file-drop" for="fileInput">
+            <span id="fileDropText">Choose one or more label photos (JPEG or PNG)</span>
+          </label>
+          <input id="fileInput" type="file" accept="image/jpeg,image/png" multiple required hidden />
+          <ul id="fileList" class="file-list"></ul>
 
-        <div class="field-grid">
-          <label>Brand name
-            <input id="brandName" type="text" required placeholder="e.g. Old Tom Distillery" />
+          <label class="beverage-type-label">Beverage type
+            <select id="beverageType" class="beverage-type-select">
+              <option value="distilled_spirits">Distilled spirits</option>
+              <option value="wine">Wine</option>
+              <option value="beer">Beer / malt beverage</option>
+            </select>
           </label>
-          <label>Class / type
-            <input id="classType" type="text" required placeholder="e.g. Kentucky Straight Bourbon Whiskey" />
+
+          <div class="field-grid">
+            <label>Brand name
+              <input id="brandName" type="text" required placeholder="e.g. Old Tom Distillery" />
+            </label>
+            <label>Class / type
+              <input id="classType" type="text" required placeholder="e.g. Kentucky Straight Bourbon Whiskey" />
+            </label>
+            <label>
+              <span id="alcoholContentLabel">Alcohol content</span>
+              <input id="alcoholContent" type="text" required placeholder="e.g. 45% Alc./Vol. (90 Proof)" />
+            </label>
+            <label>Net contents
+              <input id="netContents" type="text" required placeholder="e.g. 750 mL" />
+            </label>
+            <label>Name and address of bottler/producer
+              <input id="nameAddress" type="text" required placeholder="e.g. Old Tom Distillery, Frankfort, KY" />
+            </label>
+          </div>
+
+          <div class="add-form-actions">
+            <button type="submit" id="addFormSubmit" class="btn btn-secondary">Add to queue</button>
+            <button type="button" id="cancelEditBtn" class="btn btn-ghost hidden">Cancel edit</button>
+          </div>
+        </form>
+
+        <details class="bulk-import">
+          <summary>Bulk import from CSV</summary>
+          <p class="hint">Upload a CSV listing multiple labels, plus all the photos it references — each row's <code>images</code> column is matched to a selected photo by filename. <a href="label_batch_template.csv" download>Download a template</a>.</p>
+          <label class="bulk-import-field">CSV file
+            <input id="csvFileInput" type="file" accept=".csv,text/csv" />
           </label>
-          <label>
-            <span id="alcoholContentLabel">Alcohol content</span>
-            <input id="alcoholContent" type="text" required placeholder="e.g. 45% Alc./Vol. (90 Proof)" />
+          <label class="bulk-import-field">Label photos (JPEG or PNG)
+            <input id="csvImagesInput" type="file" accept="image/jpeg,image/png" multiple />
           </label>
-          <label>Net contents
-            <input id="netContents" type="text" required placeholder="e.g. 750 mL" />
-          </label>
-          <label>Name and address of bottler/producer
-            <input id="nameAddress" type="text" required placeholder="e.g. Old Tom Distillery, Frankfort, KY" />
-          </label>
+          <button type="button" id="csvImportBtn" class="btn btn-secondary">Import CSV</button>
+          <div id="csvImportSummary" class="csv-import-summary"></div>
+        </details>
+
+        <div id="queueWrap" class="hidden">
+          <h3>Queue (<span id="queueCount">0</span>)</h3>
+          <ul id="queueList" class="queue-list"></ul>
+          <button id="verifyAllBtn" class="btn btn-primary verify-all-btn">Verify all</button>
         </div>
+      </section>
 
-        <div class="add-form-actions">
-          <button type="submit" id="addFormSubmit" class="btn btn-secondary">Add to queue</button>
-          <button type="button" id="cancelEditBtn" class="btn btn-ghost hidden">Cancel edit</button>
+      <section id="page-results" class="page panel hidden">
+        <h2>Results</h2>
+        <div id="resultsEmpty" class="empty-state">
+          <span class="empty-icon">✅</span>
+          <p>Verified applications will show up here</p>
         </div>
-      </form>
-
-      <details class="bulk-import">
-        <summary>Bulk import from CSV</summary>
-        <p class="hint">Upload a CSV listing multiple labels, plus all the photos it references — each row's <code>images</code> column is matched to a selected photo by filename. <a href="label_batch_template.csv" download>Download a template</a>.</p>
-        <label class="bulk-import-field">CSV file
-          <input id="csvFileInput" type="file" accept=".csv,text/csv" />
-        </label>
-        <label class="bulk-import-field">Label photos (JPEG or PNG)
-          <input id="csvImagesInput" type="file" accept="image/jpeg,image/png" multiple />
-        </label>
-        <button type="button" id="csvImportBtn" class="btn btn-secondary">Import CSV</button>
-        <div id="csvImportSummary" class="csv-import-summary"></div>
-      </details>
-
-      <div id="queueWrap" class="hidden">
-        <h3>Queue (<span id="queueCount">0</span>)</h3>
-        <ul id="queueList" class="queue-list"></ul>
-        <button id="verifyAllBtn" class="btn btn-primary verify-all-btn">Verify all</button>
-      </div>
-    </section>
-
-    <section class="panel">
-      <h2>2. Results</h2>
-      <div id="resultsEmpty" class="empty-state">
-        <span class="empty-icon">✅</span>
-        <p>Verified applications will show up here</p>
-      </div>
-      <ul id="resultsList" class="results-list hidden"></ul>
-    </section>
-  </main>
+        <ul id="resultsList" class="results-list hidden"></ul>
+      </section>
+    </main>
+  </div>
 
   <div id="detailOverlay" class="overlay hidden">
     <div class="detail-modal">
@@ -99,6 +127,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

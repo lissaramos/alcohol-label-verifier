@@ -67,6 +67,26 @@ const detailOverlay = document.getElementById("detailOverlay");
 const detailContent = document.getElementById("detailContent");
 const closeDetailBtn = document.getElementById("closeDetail");
 
+// --- Page routing ---
+// A lightweight hash-based toggle rather than a router library, since the
+// app has no build step and only ever needs two views — this keeps back
+// button/bookmark support without adding a dependency.
+
+const PAGE_TITLES = { verify: "Verify Labels", results: "Results" };
+const pageLabel = document.getElementById("pageLabel");
+const sidebarLinks = document.querySelectorAll(".sidebar-link");
+const pages = document.querySelectorAll(".page");
+
+function showPage(pageId) {
+  if (!PAGE_TITLES[pageId]) pageId = "verify";
+  pages.forEach((el) => el.classList.toggle("hidden", el.id !== `page-${pageId}`));
+  sidebarLinks.forEach((el) => el.classList.toggle("active", el.dataset.page === pageId));
+  pageLabel.textContent = PAGE_TITLES[pageId];
+}
+
+window.addEventListener("hashchange", () => showPage(location.hash.slice(1)));
+showPage(location.hash.slice(1));
+
 let queue = [];
 let queueIdCounter = 0;
 let editingId = null;
