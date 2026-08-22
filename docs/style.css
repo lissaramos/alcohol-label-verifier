@@ -139,6 +139,22 @@ h3 {
   margin: 0 0 1rem;
 }
 
+#page-getting-started h3 {
+  margin-top: 1.5rem;
+}
+
+.steps-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.3rem;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.steps-list li {
+  margin-bottom: 0.4rem;
+}
+
 .connection-banner {
   max-width: 1100px;
   margin: 1.25rem auto 0 calc(var(--sidebar-width) + 2rem);

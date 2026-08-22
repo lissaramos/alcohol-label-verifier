@@ -69,16 +69,23 @@ const closeDetailBtn = document.getElementById("closeDetail");
 
 // --- Page routing ---
 // A lightweight hash-based toggle rather than a router library, since the
-// app has no build step and only ever needs two views — this keeps back
-// button/bookmark support without adding a dependency.
+// app has no build step and only ever needs a handful of views — this keeps
+// back button/bookmark support without adding a dependency. Defaults to
+// Getting Started rather than Verify Labels, since the plain submitted URL
+// (no hash) should land on instructions first, not straight into the form.
 
-const PAGE_TITLES = { verify: "Verify Labels", results: "Results" };
+const PAGE_TITLES = {
+  "getting-started": "Getting Started",
+  verify: "Verify Labels",
+  results: "Results",
+  reference: "Reference",
+};
 const pageLabel = document.getElementById("pageLabel");
 const sidebarLinks = document.querySelectorAll(".sidebar-link");
 const pages = document.querySelectorAll(".page");
 
 function showPage(pageId) {
-  if (!PAGE_TITLES[pageId]) pageId = "verify";
+  if (!PAGE_TITLES[pageId]) pageId = "getting-started";
   pages.forEach((el) => el.classList.toggle("hidden", el.id !== `page-${pageId}`));
   sidebarLinks.forEach((el) => el.classList.toggle("active", el.dataset.page === pageId));
   pageLabel.textContent = PAGE_TITLES[pageId];

@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Alcohol Label Verifier</title>
-  <link rel="stylesheet" href="style.css?v=12" />
+  <link rel="stylesheet" href="style.css?v=13" />
 </head>
 <body>
   <header class="topbar">
@@ -12,7 +12,7 @@
       <span class="brand-mark">◆</span>
       <span class="topbar-title">Alcohol Label Verifier</span>
     </div>
-    <span id="pageLabel" class="topbar-page-label">Verify Labels</span>
+    <span id="pageLabel" class="topbar-page-label">Getting Started</span>
     <span id="connectionStatus" class="connection-status"></span>
   </header>
 
@@ -21,6 +21,16 @@
   <div class="app-shell">
     <nav class="sidebar">
       <ul class="sidebar-nav">
+        <li>
+          <a href="#getting-started" class="sidebar-link" data-page="getting-started">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 11l8-7 8 7" />
+              <path d="M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9" />
+              <path d="M10 20v-6h4v6" />
+            </svg>
+            Getting Started
+          </a>
+        </li>
         <li>
           <a href="#verify" class="sidebar-link" data-page="verify">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -41,11 +51,44 @@
             Results
           </a>
         </li>
+        <li>
+          <a href="#reference" class="sidebar-link" data-page="reference">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 5.5c0-.83.67-1.5 1.5-1.5H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4.5A1.5 1.5 0 0 1 3 16.5v-11z" />
+              <path d="M21 5.5c0-.83-.67-1.5-1.5-1.5H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h5.5a1.5 1.5 0 0 0 1.5-1.5v-11z" />
+            </svg>
+            Reference
+          </a>
+        </li>
       </ul>
     </nav>
 
     <main class="app-main">
-      <section id="page-verify" class="page panel">
+      <section id="page-getting-started" class="page panel">
+        <h2>Getting Started</h2>
+        <p class="hint">Alcohol Label Verifier checks label photos against what was submitted on a TTB application — brand name, class/type, alcohol content, net contents, government warning, name/address, and sulfite declaration where it applies — flagging mismatches and close calls for a quick human review.</p>
+
+        <h3>How to verify a label</h3>
+        <ol class="steps-list">
+          <li>Go to <strong>Verify Labels</strong> and choose a beverage type (distilled spirits, wine, or beer/malt beverage).</li>
+          <li>Enter the fields exactly as submitted on the application, and upload one photo per label surface (front, back, neck, strip) — don't combine multiple surfaces into one image.</li>
+          <li>Click <strong>Add to queue</strong> — repeat for as many labels as needed, or use <strong>Bulk import from CSV</strong> to add many at once from a spreadsheet.</li>
+          <li>Click <strong>Verify all</strong> to run the checks.</li>
+          <li>Open <strong>Results</strong> to see each label's outcome — Pass, Fail, or Needs Review — and open any entry for a full field-by-field breakdown, including the option to manually mark a flagged field as a match or mismatch.</li>
+        </ol>
+
+        <h3>What gets checked</h3>
+        <ul class="steps-list">
+          <li><strong>Brand name / class-type</strong> — fuzzy-matched, so near-identical text (different capitalization, minor punctuation) still passes automatically.</li>
+          <li><strong>Alcohol content</strong> — category-specific rules (tight tolerance for spirits, legal tolerance bands for wine, optional for beer).</li>
+          <li><strong>Net contents</strong> — volume and unit compared, tolerant of unit formatting.</li>
+          <li><strong>Government warning</strong> — exact match against the legally required text; no tolerance.</li>
+          <li><strong>Name and address</strong> of the bottler/producer — required on every label.</li>
+          <li><strong>Sulfite declaration</strong> — checked on wine and malt beverages.</li>
+        </ul>
+      </section>
+
+      <section id="page-verify" class="page panel hidden">
         <h2>Verify Labels</h2>
         <p class="hint">Enter what was submitted on the application, and upload a photo for each label surface (front, back, neck, strip) — one per photo, not combined into one image. The government warning is checked automatically — no need to enter it.</p>
 
@@ -117,6 +160,15 @@
         </div>
         <ul id="resultsList" class="results-list hidden"></ul>
       </section>
+
+      <section id="page-reference" class="page panel hidden">
+        <h2>Reference</h2>
+        <div class="empty-state">
+          <span class="empty-icon">📖</span>
+          <p>Label requirement summaries and links to TTB guidance are coming soon.</p>
+          <p class="hint">In the meantime, see the official <a href="https://www.ttb.gov/regulated-commodities/labeling/labeling-resources" target="_blank" rel="noopener">TTB labeling resources</a>.</p>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -127,6 +179,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 </body>
 </html>
